@@ -14,9 +14,6 @@ const THEME_STORAGE_KEY = "community-hub-theme"
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined)
 
-const getSystemTheme = (): Theme =>
-  window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
-
 const applyTheme = (theme: Theme) => {
   document.documentElement.classList.toggle("dark", theme === "dark")
 }
@@ -31,7 +28,7 @@ const getInitialTheme = (): Theme => {
     return storedTheme
   }
 
-  return getSystemTheme()
+  return "light"
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
@@ -50,23 +47,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     applyTheme(theme)
   }, [theme])
-
-  useEffect(() => {
-    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
-    if (storedTheme) {
-      return
-    }
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-    const handleChange = (event: MediaQueryListEvent) => {
-      const nextTheme = event.matches ? "dark" : "light"
-      setThemeState(nextTheme)
-      applyTheme(nextTheme)
-    }
-
-    mediaQuery.addEventListener("change", handleChange)
-    return () => mediaQuery.removeEventListener("change", handleChange)
-  }, [])
 
   const setTheme = (nextTheme: Theme) => {
     setThemeState(nextTheme)
@@ -91,10 +71,9 @@ export const themeScript = `
     try {
       var storageKey = "${THEME_STORAGE_KEY}";
       var storedTheme = window.localStorage.getItem(storageKey);
-      var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       var resolvedTheme = storedTheme === "dark" || storedTheme === "light"
         ? storedTheme
-        : (prefersDark ? "dark" : "light");
+        : "light";
 
       if (resolvedTheme === "dark") {
         document.documentElement.classList.add("dark");

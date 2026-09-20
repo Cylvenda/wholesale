@@ -54,6 +54,12 @@ export function PaymentForm({
     const [submitting, setSubmitting] = useState(false)
     const [formError, setFormError] = useState<string | null>(null)
 
+    const selectedSale = sales.find((s) => s.uuid === sale)
+    const saleTotal = selectedSale ? Number(selectedSale.total) : 0
+    const paidAmount = selectedSale ? Number(selectedSale.paid_amount || 0) : 0
+    const outstandingBalance = saleTotal - paidAmount
+    const remainingBalance = outstandingBalance - (amount ? Number(amount) : 0)
+
     useEffect(() => {
         let active = true
 
@@ -138,15 +144,65 @@ export function PaymentForm({
                         <SelectValue placeholder="Select an unpaid or partially paid sale" />
                     </SelectTrigger>
                     <SelectContent>
-                        {sales.map((s) => (
-                            <SelectItem key={s.uuid} value={s.uuid}>
-                                {s.customer_name || "Unknown customer"} —{" "}
-                                {formatCurrency(s.total)}
-                            </SelectItem>
-                        ))}
+                        {sales.map((s) => {
+                            const paid = Number(s.paid_amount || 0)
+                            const remaining = Number(s.total) - paid
+                            return (
+                                <SelectItem key={s.uuid} value={s.uuid}>
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className="font-medium">
+                                            {s.customer_name || "Unknown customer"}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                            {formatCurrency(s.total)} •{" "}
+                                            {remaining > 0
+                                                ? `Balance: ${formatCurrency(remaining)}`
+                                                : "Fully paid"}
+                                        </span>
+                                    </div>
+                                </SelectItem>
+                            )
+                        })}
                     </SelectContent>
                 </Select>
             </div>
+
+            {selectedSale && (
+                <div className="rounded-xl border border-border/70 bg-muted/30 p-4 space-y-2">
+                    <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">
+                            Sale total
+                        </span>
+                        <span className="font-medium">
+                            {formatCurrency(saleTotal)}
+                        </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">
+                            Amount paid
+                        </span>
+                        <span className="font-medium text-blue-600">
+                            {formatCurrency(paidAmount)}
+                        </span>
+                    </div>
+                    <div className="flex justify-between items-center border-t border-border/50 pt-2">
+                        <span className="text-sm font-medium text-muted-foreground">
+                            Remaining balance
+                        </span>
+                        <span className="font-bold text-amber-600 text-lg">
+                            {formatCurrency(outstandingBalance)}
+                        </span>
+                    </div>
+                    {remainingBalance < 0 && (
+                        <p
+                            role="alert"
+                            className="text-sm font-medium text-destructive"
+                        >
+                            Overpayment: {formatCurrency(Math.abs(remainingBalance))}
+                        </p>
+                    )}
+                </div>
+            )}
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div className="space-y-2">
@@ -159,7 +215,13 @@ export function PaymentForm({
                         onChange={(e) => setAmount(e.target.value)}
                         disabled={submitting}
                         placeholder="0.00"
+                        max={outstandingBalance > 0 ? outstandingBalance : undefined}
                     />
+                    {selectedSale && (
+                        <p className="text-xs text-muted-foreground">
+                            Max: {formatCurrency(outstandingBalance)}
+                        </p>
+                    )}
                 </div>
 
                 <div className="space-y-2">

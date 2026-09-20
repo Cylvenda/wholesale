@@ -90,11 +90,11 @@ const navItems: NavItem[] = [
     href: "/movements",
     icon: Boxes,
   },
-  {
-    label: "Expenses",
-    href: "/expenses",
-    icon: FileText,
-  },
+  // {
+  //   label: "Expenses",
+  //   href: "/expenses",
+  //   icon: FileText,
+  // },
   {
     label: "Users",
     href: "/users",

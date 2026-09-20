@@ -69,6 +69,7 @@ export default function BrandsPage() {
     const [categories, setCategories] = useState<Category[]>([])
     const [formError, setFormError] = useState<string | null>(null)
     const [submitting, setSubmitting] = useState(false)
+    const [refreshKey, setRefreshKey] = useState(0)
 
     const loadRows = useCallback(async () => {
         const [brandRows, categoryRows] = await Promise.all([
@@ -117,6 +118,7 @@ export default function BrandsPage() {
                 toast.success("Brand created successfully.")
             }
             setFormOpen(false)
+            setRefreshKey((prev) => prev + 1)
         } catch (submitError) {
             setFormError(
                 messageFrom(
@@ -136,6 +138,7 @@ export default function BrandsPage() {
             await inventoryService.deleteBrand(deletingBrand.uuid)
             toast.success("Brand deleted successfully.")
             setDeletingBrand(null)
+            setRefreshKey((prev) => prev + 1)
         } catch (deleteError) {
             toast.error(
                 messageFrom(
@@ -156,6 +159,7 @@ export default function BrandsPage() {
                 action="Add brand"
                 columns={["Brand", "Created"]}
                 loadRows={loadRows}
+                refreshKey={refreshKey}
                 onAction={openCreate}
                 onEdit={(row) => {
                     const brand: Brand = {

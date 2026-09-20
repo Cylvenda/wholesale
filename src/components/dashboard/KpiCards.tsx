@@ -14,10 +14,9 @@ import type { KpiMetric } from "./types"
 
 export interface KpiCardsProps {
     stats: DashboardStats
-    totalPurchases?: string
 }
 
-export function KpiCards({ stats, totalPurchases = "0" }: KpiCardsProps) {
+export function KpiCards({ stats }: KpiCardsProps) {
     const metrics: KpiMetric[] = React.useMemo(() => {
         return [
             {
@@ -68,7 +67,7 @@ export function KpiCards({ stats, totalPurchases = "0" }: KpiCardsProps) {
             {
                 id: "total-purchases",
                 title: "Total Purchases",
-                value: formatCurrency(totalPurchases),
+                value: formatCurrency(stats.purchases_value),
                 change: "",
                 trend: "neutral",
                 subtext: "All purchases",
@@ -81,7 +80,7 @@ export function KpiCards({ stats, totalPurchases = "0" }: KpiCardsProps) {
                 },
             },
         ]
-    }, [stats, totalPurchases])
+    }, [stats])
 
     const renderIcon = (type: KpiMetric["iconType"]) => {
         switch (type) {

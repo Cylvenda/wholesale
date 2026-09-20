@@ -1,13 +1,13 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import { Plus } from "lucide-react"
 import { toast } from "react-toastify"
 import {
     inventoryService,
     type Category,
     type CategoryPayload,
 } from "@/api/services/inventory.service"
+import { useRefresh } from "@/hooks/use-refresh"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -23,7 +23,6 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
@@ -60,6 +59,7 @@ function toRows(categories: Category[]): InventoryRow[] {
 }
 
 export default function CategoriesPage() {
+    const { refreshKey, refresh } = useRefresh()
     const [formOpen, setFormOpen] = useState(false)
     const [editing, setEditing] = useState<Category | null>(null)
     const [deleting, setDeleting] = useState<Category | null>(null)
@@ -110,6 +110,7 @@ export default function CategoriesPage() {
                 toast.success("Category created successfully.")
             }
             setFormOpen(false)
+            refresh()
         } catch (submitError) {
             setFormError(
                 messageFrom(
@@ -129,6 +130,7 @@ export default function CategoriesPage() {
             await inventoryService.deleteCategory(deleting.uuid)
             toast.success("Category deleted successfully.")
             setDeleting(null)
+            refresh()
         } catch {
             toast.error(
                 "Unable to delete this category. It may be in use by brands."
@@ -146,6 +148,7 @@ export default function CategoriesPage() {
                 action="Add category"
                 columns={["Category", "Created"]}
                 loadRows={loadRows}
+                refreshKey={refreshKey}
                 onAction={() => openForm()}
                 onEdit={(row) => {
                     const category = {

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useEffect, useState } from "react"
 import { toast } from "react-toastify"
-import { inventoryService, type DashboardStats, type Purchase } from "@/api/services/inventory.service"
+import { inventoryService, type DashboardStats } from "@/api/services/inventory.service"
 import { KpiCards } from "@/components/dashboard/KpiCards"
 import { SalesChart } from "@/components/dashboard/SalesChart"
 import { DealsTable } from "@/components/dashboard/DealsTable"
@@ -17,40 +17,23 @@ interface ChartPoint {
 
 export default function DashboardPage() {
     const [stats, setStats] = useState<DashboardStats | null>(null)
-    const [totalPurchases, setTotalPurchases] = useState("0")
     const [loading, setLoading] = useState(true)
 
     const loadStats = async () => {
         setLoading(true)
         try {
-            const [statsData, purchasesData] = await Promise.all([
-                inventoryService.getDashboardStats(),
-                inventoryService.listPurchases(),
-            ])
+            const statsData = await inventoryService.getDashboardStats()
 
-            const total = purchasesData.reduce(
-                (sum: number, purchase: Purchase) => sum + Number(purchase.total),
-                0
-            )
-            setTotalPurchases(total.toString())
-
-            const purchaseByDate = new Map<string, number>()
-            purchasesData.forEach((purchase: Purchase) => {
-                const dateStr = new Date(purchase.purchase_date).toISOString().slice(0, 10)
-                const current = purchaseByDate.get(dateStr) ?? 0
-                purchaseByDate.set(dateStr, current + Number(purchase.total))
-            })
-
-            const chartDataWithPurchases: ChartPoint[] = statsData.chart_data.map((point) => ({
+            const chartData: ChartPoint[] = statsData.chart_data.map((point) => ({
                 day: point.day,
                 date: point.date,
                 amount: point.amount,
-                purchases: purchaseByDate.get(point.date) ?? 0,
+                purchases: point.purchases ?? 0,
             }))
 
             setStats({
                 ...statsData,
-                chart_data: chartDataWithPurchases,
+                chart_data: chartData,
             })
         } catch {
             toast.error("Unable to load dashboard statistics.")
@@ -81,7 +64,7 @@ export default function DashboardPage() {
         return null
     }
 
-    const chartData: ChartPoint[] = stats.chart_data.map((point) => ({
+    const chartData = stats.chart_data.map((point) => ({
         day: point.day,
         date: point.date,
         amount: point.amount,
@@ -99,7 +82,7 @@ export default function DashboardPage() {
                 </p>
             </div>
 
-            <KpiCards stats={stats} totalPurchases={totalPurchases} />
+            <KpiCards stats={stats} />
 
             <SalesChart data={chartData} />
 

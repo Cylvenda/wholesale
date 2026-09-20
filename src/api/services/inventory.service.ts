@@ -187,6 +187,8 @@ export type Sale = {
     notes: string
     items: SaleItem[]
     created_at: string
+    paid_amount: string
+    outstanding_balance: string
 }
 
 export type SalePayload = {
@@ -223,6 +225,7 @@ export type DashboardStats = {
     total_products: number
     stock_units: number
     sales_value: number
+    purchases_value: number
     draft_purchases: number
     low_stock_items: number
     out_of_stock_items: number
