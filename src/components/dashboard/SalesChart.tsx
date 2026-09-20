@@ -15,6 +15,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/format"
 import type { ChartDataPoint } from "./types"
 
+function formatShortDate(dateStr: string): string {
+    const date = new Date(dateStr)
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    return `${months[date.getMonth()]} ${date.getDate()}`
+}
+
 interface CustomTooltipProps {
     active?: boolean
     payload?: Array<{
@@ -61,10 +68,11 @@ const emptySubscribe = () => () => {}
 
 interface SalesChartProps {
     data: ChartDataPoint[]
+    selectedPeriod?: string
+    onPeriodChange?: (period: string) => void
 }
 
-export function SalesChart({ data }: SalesChartProps) {
-    const [selectedPeriod, setSelectedPeriod] = React.useState("7d")
+export function SalesChart({ data, selectedPeriod = "7d", onPeriodChange }: SalesChartProps) {
     const isMounted = React.useSyncExternalStore(emptySubscribe, () => true, () => false)
 
     const chartData = React.useMemo(() => {
@@ -72,6 +80,7 @@ export function SalesChart({ data }: SalesChartProps) {
         return data.map((point) => ({
             day: point.day,
             date: point.date,
+            label: formatShortDate(point.date),
             sales: point.amount || 0,
             purchases: point.purchases || 0,
         }))
@@ -83,6 +92,13 @@ export function SalesChart({ data }: SalesChartProps) {
 
     const totalPurchases = React.useMemo(() => {
         return chartData.reduce((sum, point) => sum + point.purchases, 0)
+    }, [chartData])
+
+    const yAxisDomain = React.useMemo(() => {
+        const max = Math.max(
+            ...chartData.map((p) => Math.max(p.sales, p.purchases))
+        )
+        return [0, max > 0 ? max * 1.1 : 100]
     }, [chartData])
 
     const yAxisTickFormatter = (value: number) => {
@@ -114,7 +130,7 @@ export function SalesChart({ data }: SalesChartProps) {
                 </div>
                 <select
                     value={selectedPeriod}
-                    onChange={(e) => setSelectedPeriod(e.target.value)}
+                    onChange={(e) => onPeriodChange?.(e.target.value)}
                     className="h-9 w-[130px] cursor-pointer rounded-xl border border-border bg-background px-3 text-xs font-medium text-foreground shadow-xs"
                 >
                     <option value="7d">Last 7 days</option>
@@ -140,7 +156,7 @@ export function SalesChart({ data }: SalesChartProps) {
                                 />
 
                                 <XAxis
-                                    dataKey="day"
+                                    dataKey="label"
                                     tickLine={false}
                                     axisLine={false}
                                     tickMargin={12}
@@ -152,7 +168,7 @@ export function SalesChart({ data }: SalesChartProps) {
                                 />
 
                                 <YAxis
-                                    domain={[0, "dataMax"]}
+                                    domain={yAxisDomain}
                                     tickLine={false}
                                     axisLine={false}
                                     tickMargin={12}

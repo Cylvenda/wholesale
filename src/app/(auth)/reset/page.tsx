@@ -16,7 +16,7 @@ type ResetFormValues = z.infer<typeof ResetFormSchema>;
 
 const ForgetPassword = () => {
   const [loading, setLoading] = useState(false);
-  const tt = (en: string, _sw?: string) => en;
+  const tt = (en: string, _sw?: string) => en; // eslint-disable-line @typescript-eslint/no-unused-vars
 
   const form = useForm<ResetFormValues>({
     resolver: zodResolver(ResetFormSchema),

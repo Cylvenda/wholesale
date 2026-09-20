@@ -19,4 +19,5 @@ export interface ChartDataPoint {
     date: string
     amount: number
     purchases?: number
+    label?: string
 }

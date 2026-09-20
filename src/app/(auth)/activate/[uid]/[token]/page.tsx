@@ -13,7 +13,7 @@ type ActivationState = "loading" | "success" | "error";
 export default function ActivateAccountPage() {
   const params = useParams<{ uid: string; token: string }>();
   const router = useRouter();
-  const tt = (en: string, _sw?: string) => en;
+  const tt = (en: string, _sw?: string) => en; // eslint-disable-line @typescript-eslint/no-unused-vars
 
   const uid = useMemo(() => params?.uid ?? "", [params?.uid]);
   const token = useMemo(() => params?.token ?? "", [params?.token]);

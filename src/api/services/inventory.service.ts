@@ -314,7 +314,10 @@ async function remove(endpoint: string): Promise<void> {
 
 export const inventoryService = {
     /* --- Dashboard --- */
-    getDashboardStats: () => get<DashboardStats>("dashboard/"),
+    getDashboardStats: (period?: string) => {
+        const query = period ? `?period=${encodeURIComponent(period)}` : ""
+        return get<DashboardStats>(`dashboard/${query}`)
+    },
 
     /* --- Categories --- */
     listCategories: () => list<Category>("categories/"),

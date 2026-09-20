@@ -18,11 +18,12 @@ interface ChartPoint {
 export default function DashboardPage() {
     const [stats, setStats] = useState<DashboardStats | null>(null)
     const [loading, setLoading] = useState(true)
+    const [selectedPeriod, setSelectedPeriod] = useState("7d")
 
-    const loadStats = async () => {
+    const loadStats = async (period: string) => {
         setLoading(true)
         try {
-            const statsData = await inventoryService.getDashboardStats()
+            const statsData = await inventoryService.getDashboardStats(period)
 
             const chartData: ChartPoint[] = statsData.chart_data.map((point) => ({
                 day: point.day,
@@ -43,9 +44,9 @@ export default function DashboardPage() {
     }
 
     useEffect(() => {
-        const load = async () => { await loadStats() }
+        const load = async () => { await loadStats(selectedPeriod) }
         load()
-    }, [])
+    }, [selectedPeriod])
 
     if (loading) {
         return (
@@ -84,7 +85,7 @@ export default function DashboardPage() {
 
             <KpiCards stats={stats} />
 
-            <SalesChart data={chartData} />
+            <SalesChart data={chartData} selectedPeriod={selectedPeriod} onPeriodChange={setSelectedPeriod} />
 
             <DealsTable recentSales={stats.recent_sales} />
         </div>
