@@ -1,0 +1,6 @@
+import { Badge } from "@/components/ui/badge"
+import type { Status } from "@/lib/inventory-data"
+
+const labels: Record<Status, string> = { active: "Active", inactive: "Inactive", "in-stock": "In stock", "low-stock": "Low stock", "out-of-stock": "Out of stock", draft: "Draft", received: "Received", cancelled: "Cancelled", paid: "Paid", partial: "Partial", pending: "Pending", completed: "Completed", purchase: "Stock in", sale: "Stock out", adjustment: "Adjustment", return: "Return" }
+const styles: Partial<Record<Status, string>> = { inactive: "bg-muted text-muted-foreground", "low-stock": "border-primary/30 bg-primary/10 text-primary", "out-of-stock": "border-destructive/30 bg-destructive/10 text-destructive", cancelled: "border-destructive/30 bg-destructive/10 text-destructive", draft: "bg-muted text-muted-foreground", partial: "border-primary/30 bg-primary/10 text-primary", pending: "bg-muted text-muted-foreground", purchase: "bg-muted text-foreground", sale: "border-primary/30 bg-primary/10 text-primary", adjustment: "bg-muted text-foreground", return: "bg-muted text-foreground" }
+export function StatusBadge({ status }: { status: Status }) { return <Badge variant="outline" className={`whitespace-nowrap border-border bg-primary/10 text-primary ${styles[status] ?? ""}`}>{labels[status]}</Badge> }

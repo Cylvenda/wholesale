@@ -1,0 +1,160 @@
+"use client"
+
+import * as React from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import {
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+} from "@/components/ui/sidebar"
+import { ChevronRight } from "lucide-react"
+
+export function NavMain({
+  items,
+  label = "Platform",
+}: {
+  items: {
+    title: string
+    url: string
+    icon?: React.ReactNode
+    isActive?: boolean
+    items?: {
+      title?: string
+      icon?: React.ReactNode
+      url?: string
+    }[]
+  }[]
+  label?: string
+}) {
+  const pathname = usePathname()
+
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2 px-3">
+        {label}
+      </SidebarGroupLabel>
+
+      <SidebarMenu className="space-y-1">
+        {items.map((item) => {
+          const isDashboardLink =
+            item.url === "/home" ||
+            item.url === "/admin" ||
+            item.url === "/groups" ||
+            item.url === "/guide" ||
+            /^\/group\/[^/]+$/.test(item.url)
+
+          const isActive = item.items
+            ? pathname === item.url || (!isDashboardLink && pathname.startsWith(item.url + "/"))
+            : pathname === item.url
+
+          if (!item.items) {
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
+                  tooltip={item.title}
+                  isActive={isActive}
+                  asChild
+                  className={`rounded-md transition-colors ${isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}`}
+                >
+                  <Link
+                    className="flex flex-row gap-3 items-center w-full py-1"
+                    href={item.url}
+                    prefetch={false}
+                    target={item.url === "/guide" ? "_blank" : undefined}
+                    rel={item.url === "/guide" ? "noopener noreferrer" : undefined}
+                  >
+                    <span className={isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/70'}>{item.icon}</span>
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          }
+
+          return (
+            <Collapsible
+              key={item.title}
+              asChild
+              defaultOpen={item.isActive || isActive}
+              className="group/collapsible"
+            >
+              <SidebarMenuItem>
+
+                {/* Main Item */}
+                <CollapsibleTrigger asChild>
+
+                  <SidebarMenuButton 
+                    tooltip={item.title}
+                    isActive={isActive}
+                    className={`rounded-md transition-colors ${isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}`}
+                  >
+                    <span className={`flex items-center gap-3 ${isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/70'}`}>
+                      {item.icon}
+                    </span>
+                    <span>{item.title}</span>
+
+                    {/* Show arrow only if submenu exists */}
+                    <ChevronRight
+                      className="ml-auto w-4 h-4 text-blue-600 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 opacity-50"
+                    />
+                  </SidebarMenuButton>
+                </CollapsibleTrigger>
+
+                {/* Sub Menu */}
+                {item.items && (
+                  <CollapsibleContent>
+                    <SidebarMenuSub className="mt-1 border-l border-border/50 ml-4 pl-4 space-y-1">
+                      {item.items.map((subItem) => {
+                        const isSubActive = pathname === subItem.url
+                        return (
+                          <SidebarMenuSubItem key={subItem.title}>
+                            <SidebarMenuSubButton 
+                              asChild
+                              isActive={isSubActive}
+                              className={`rounded-md transition-colors ${isSubActive ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}`}
+                            >
+                              <div>
+                                {isSubActive ? (
+                                  <span className="flex flex-row items-center gap-2 py-0.5">
+                                    <span className="text-sidebar-primary">{subItem.icon}</span>
+                                    <span>{subItem.title}</span>
+                                  </span>
+                                ) : (
+                                  <Link
+                                    className="flex flex-row gap-2 items-center w-full py-0.5"
+                                    href={subItem.url || "#"}
+                                    prefetch={false}
+                                    target={subItem.url === "/guide" ? "_blank" : undefined}
+                                    rel={subItem.url === "/guide" ? "noopener noreferrer" : undefined}
+                                  >
+                                    <span className="text-sidebar-foreground/60">{subItem.icon}</span>
+                                    <span>{subItem.title}</span>
+                                  </Link>
+                                )}
+                              </div>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        )
+                      })}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                )}
+              </SidebarMenuItem>
+            </Collapsible>
+          )
+        })}
+      </SidebarMenu>
+    </SidebarGroup>
+  )
+}

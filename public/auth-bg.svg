@@ -1,0 +1,43 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 600 800"
+  preserveAspectRatio="xMidYMid slice"
+>
+  <defs>
+    <linearGradient id="grad-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f0f0ff" />
+      <stop offset="100%" stop-color="#ffffff" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="800" fill="url(#grad-bg)" />
+
+  <!-- Floating boxes representing wholesale inventory -->
+  <g opacity="0.35">
+    <rect x="80" y="180" width="110" height="90" rx="6" fill="#3b82f6" />
+    <rect x="210" y="200" width="110" height="90" rx="6" fill="#8b5cf6" />
+    <rect x="340" y="170" width="110" height="90" rx="6" fill="#10b981" />
+    <rect x="80" y="300" width="160" height="90" rx="6" fill="#f59e0b" />
+    <rect x="260" y="310" width="160" height="90" rx="6" fill="#ef4444" />
+    <rect x="440" y="290" width="110" height="90" rx="6" fill="#06b6d4" />
+  </g>
+
+  <!-- Stacked pallets -->
+  <g opacity="0.25">
+    <rect x="100" y="440" width="180" height="40" rx="4" fill="#4a3fc5" />
+    <rect x="100" y="410" width="180" height="40" rx="4" fill="#4a3fc5" opacity="0.5" />
+    <rect x="100" y="380" width="180" height="40" rx="4" fill="#4a3fc5" opacity="0.3" />
+    <rect x="320" y="460" width="180" height="40" rx="4" fill="#4a3fc5" />
+    <rect x="320" y="420" width="180" height="40" rx="4" fill="#4a3fc5" opacity="0.5" />
+  </g>
+
+  <!-- App icon badge -->
+  <circle cx="490" cy="130" r="60" fill="#4a3fc5" />
+  <text x="490" y="145" text-anchor="middle" fill="white" font-family="Poppins, sans-serif" font-size="28" font-weight="700">SL</text>
+
+  <!-- Decorative curve -->
+  <path
+    d="M 0 560 Q 150 520 300 580 T 600 540 V 800 H 0 Z"
+    fill="#4a3fc5"
+    opacity="0.04"
+  />
+</svg>
