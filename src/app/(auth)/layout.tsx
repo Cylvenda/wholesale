@@ -31,14 +31,14 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
                             >
                                 <Image
                                     src="/icon-192.png"
-                                    alt="StockLedger icon"
+                                    alt="IMARA SHOP icon"
                                     width={40}
                                     height={40}
                                     className="object-contain"
                                 />
                                 <div className="min-w-0">
                                     <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-chart-4 leading-none sm:text-sm sm:tracking-[0.25em]">
-                                        Wholesale Inventory
+                                        IMARA SHOP
                                     </p>
                                     <p className="mt-1 text-[8px] font-bold uppercase leading-tight tracking-wider text-muted-foreground sm:text-[9px] sm:tracking-widest">
                                         Stock, sales, purchasing operations

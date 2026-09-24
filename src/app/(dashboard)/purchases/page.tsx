@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
+import { ShoppingBag } from "lucide-react"
 import {
     inventoryService,
     type Purchase as PurchaseType,
@@ -20,11 +21,11 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
 import { ResourcePage } from "@/components/resource-page"
+import { ViewDialog } from "@/components/shared/view-dialog"
 import type { InventoryRow, Status } from "@/lib/inventory-data"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { toast } from "react-toastify"
@@ -155,7 +156,7 @@ export default function PurchasesPage() {
             />
 
             <Dialog open={formOpen} onOpenChange={setFormOpen}>
-                <DialogContent className="max-h-[95vh] max-w-6xl w-full flex flex-col overflow-hidden">
+                <DialogContent className="max-h-[95vh] w-[min(96vw,1440px)] max-w-none flex flex-col overflow-hidden">
                     <DialogHeader>
                         <DialogTitle>
                             {editingPurchase ? "Edit purchase" : "Create purchase"}
@@ -175,61 +176,29 @@ export default function PurchasesPage() {
                 </DialogContent>
             </Dialog>
 
-            <Dialog
-                open={Boolean(viewingPurchase)}
-                onOpenChange={() => setViewingPurchase(null)}
-            >
-                <DialogContent className="max-h-[95vh] max-w-6xl w-full flex flex-col overflow-hidden">
-                    <DialogHeader>
-                        <DialogTitle>
-                            {viewingPurchase?.invoice_number ||
-                                `#${viewingPurchase?.uuid.slice(0, 8).toUpperCase()}`}
-                        </DialogTitle>
-                        <DialogDescription>
-                            Purchase details and line items.
-                        </DialogDescription>
-                    </DialogHeader>
-                    {viewingPurchase && (
-                        <div className="flex-1 overflow-y-auto space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Supplier
-                                    </p>
-                                    <p className="mt-1">
-                                        {viewingPurchase.supplier_name || "—"}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Date
-                                    </p>
-                                    <p className="mt-1">
-                                        {formatDate(viewingPurchase.purchase_date)}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Status
-                                    </p>
-                                    <p className="mt-1 capitalize">
-                                        {viewingPurchase.status}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Total
-                                    </p>
-                                    <p className="mt-1">
-                                        {formatCurrency(viewingPurchase.total)}
-                                    </p>
-                                </div>
-                            </div>
-                            <div>
-                                <p className="text-xs font-medium text-muted-foreground">
-                                    Items
-                                </p>
-                                <div className="mt-2 space-y-2">
+            {viewingPurchase && (
+                <ViewDialog
+                    open={Boolean(viewingPurchase)}
+                    onOpenChange={() => setViewingPurchase(null)}
+                    title={
+                        viewingPurchase.invoice_number ||
+                        `#${viewingPurchase.uuid.slice(0, 8).toUpperCase()}`
+                    }
+                    description={viewingPurchase.supplier_name || undefined}
+                    status={toPurchaseStatus(viewingPurchase.status)}
+                    icon={<ShoppingBag className="size-5" />}
+                    fields={[
+                        { label: "Supplier", value: viewingPurchase.supplier_name || "—" },
+                        { label: "Date", value: formatDate(viewingPurchase.purchase_date) },
+                        { label: "Status", status: toPurchaseStatus(viewingPurchase.status) },
+                        { label: "Total", value: formatCurrency(viewingPurchase.total) },
+                        { label: "Notes", value: viewingPurchase.notes || "—" },
+                    ]}
+                    sections={[
+                        {
+                            label: "Items",
+                            content: (
+                                <div className="space-y-2">
                                     {viewingPurchase.items.map((item) => (
                                         <div
                                             key={item.uuid}
@@ -244,19 +213,19 @@ export default function PurchasesPage() {
                                         </div>
                                     ))}
                                 </div>
-                            </div>
-                        </div>
-                    )}
-                    <DialogFooter>
+                            ),
+                        },
+                    ]}
+                    actions={
                         <Button
                             variant="outline"
                             onClick={() => setViewingPurchase(null)}
                         >
                             Close
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    }
+                />
+            )}
 
             <AlertDialog
                 open={cancelOpen}

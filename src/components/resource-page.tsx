@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { MoreHorizontal, Plus, Search, SlidersHorizontal } from "lucide-react"
+import { ChevronLeft, ChevronRight, Download, Eye, MoreHorizontal, Plus, Printer, Search, SlidersHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -21,6 +21,7 @@ import {
 import { PageHeader } from "@/components/shared/page-header"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { EmptyState, ErrorState, TableSkeleton } from "@/components/shared/table-states"
+import { ViewDialog, type ViewDialogField } from "@/components/shared/view-dialog"
 import {
     Table,
     TableBody,
@@ -44,8 +45,12 @@ type ResourcePageProps = {
     refreshKey?: number
     onAction?: () => void
     onView?: (row: InventoryRow) => void
+    onViewReceipt?: (row: InventoryRow) => void
+    onDownloadReceipt?: (row: InventoryRow) => void
+    onPrintReceipt?: (row: InventoryRow) => void
     onEdit?: (row: InventoryRow) => void
     onDelete?: (row: InventoryRow) => void
+    viewIcon?: React.ReactNode
 }
 
 export function ResourcePage({
@@ -59,8 +64,12 @@ export function ResourcePage({
     refreshKey = 0,
     onAction,
     onView,
+    onViewReceipt,
+    onDownloadReceipt,
+    onPrintReceipt,
     onEdit,
     onDelete,
+    viewIcon,
 }: ResourcePageProps) {
     const [search, setSearch] = useState("")
     const [remoteRows, setRemoteRows] = useState<InventoryRow[] | null>(null)
@@ -71,6 +80,7 @@ export function ResourcePage({
     const [pageSize, setPageSize] = useState(10)
     const [sortColumn, setSortColumn] = useState<number | "status" | null>(null)
     const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
+    const [viewingRow, setViewingRow] = useState<InventoryRow | null>(null)
 
     const refresh = () => {
         if (!loadRows) return
@@ -151,7 +161,10 @@ export function ResourcePage({
     const startIndex = (currentPage - 1) * pageSize
     const paginatedRows = processedRows.slice(startIndex, startIndex + pageSize)
 
-    const showView = Boolean(onView)
+    const showView = true
+    const showViewReceipt = Boolean(onViewReceipt)
+    const showDownloadReceipt = Boolean(onDownloadReceipt)
+    const showPrintReceipt = Boolean(onPrintReceipt)
     const showEdit = Boolean(onEdit)
     const showDelete = Boolean(onDelete)
 
@@ -169,12 +182,35 @@ export function ResourcePage({
         return sortDirection === "asc" ? " ↑" : " ↓"
     }
 
+    const handleView = (row: InventoryRow) => {
+        if (onView) {
+            onView(row)
+        } else {
+            setViewingRow(row)
+        }
+    }
+
+    const getViewFields = (row: InventoryRow): ViewDialogField[] => {
+        const fields: ViewDialogField[] = []
+
+        columns.slice(1).forEach((column, index) => {
+            if (column.toLowerCase() === "status") return
+            const value = row.values[index]
+            if (value !== undefined) {
+                fields.push({ label: column, value })
+            }
+        })
+
+        return fields
+    }
+
     const hasStatusColumn = useMemo(
         () => paginatedRows.some((row) => row.status !== undefined),
         [paginatedRows]
     )
 
     return (
+        <>
         <main className="min-h-full bg-muted/30">
             <div className="mx-auto w-full max-w-8xl space-y-6 p-4 sm:p-6">
                 <PageHeader
@@ -232,7 +268,7 @@ export function ResourcePage({
                         ) : loading ? (
                             <TableSkeleton />
                         ) : (
-                            <Table>
+                            <Table className="min-w-[720px]">
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-12 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -272,11 +308,11 @@ export function ResourcePage({
                                 <TableBody>
                                     {paginatedRows.length ? (
                                         paginatedRows.map((row, rowIndex) => (
-                                            <TableRow key={row.id}>
+                                            <TableRow key={row.id} className="group cursor-pointer" onClick={() => handleView(row)}>
                                                 <TableCell className="text-center text-sm text-muted-foreground">
                                                     {startIndex + rowIndex + 1}
                                                 </TableCell>
-                                                <TableCell className="pl-2">
+                                                <TableCell className="sticky left-0 z-10 bg-card pl-2 group-hover:bg-muted/50">
                                                     <div className="font-medium">
                                                         {row.primary}
                                                     </div>
@@ -299,7 +335,7 @@ export function ResourcePage({
                                                         <StatusBadge status={row.status} />
                                                     </TableCell>
                                                 )}
-                                                <TableCell className="pr-6">
+                                                <TableCell className="sticky right-0 z-10 bg-card pr-3 group-hover:bg-muted/50 sm:pr-6" onClick={(event) => event.stopPropagation()}>
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
                                                             <Button
@@ -310,12 +346,36 @@ export function ResourcePage({
                                                                 <MoreHorizontal className="size-4 text-blue-600" />
                                                             </Button>
                                                         </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
+                                                        <DropdownMenuContent align="end" className="max-w-20">
                                                             {showView && (
                                                                 <DropdownMenuItem
-                                                                    onClick={() => onView?.(row)}
+                                                                    onClick={() => handleView(row)}
                                                                 >
+                                                                    <Eye className="mr-0.5 size-4" />
                                                                     View details
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            {showViewReceipt && row.raw?.status === "completed" && (
+                                                                <DropdownMenuItem
+                                                                    onClick={() => onViewReceipt?.(row)}
+                                                                >
+                                                                    View receipt
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            {showDownloadReceipt && row.raw?.status === "completed" && (
+                                                                <DropdownMenuItem
+                                                                    onClick={() => onDownloadReceipt?.(row)}
+                                                                >
+                                                                    <Download className="mr-2 size-4" />
+                                                                    Download receipt
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            {showPrintReceipt && row.raw?.status === "completed" && (
+                                                                <DropdownMenuItem
+                                                                    onClick={() => onPrintReceipt?.(row)}
+                                                                >
+                                                                    <Printer className="mr-2 size-4" />
+                                                                    Print receipt
                                                                 </DropdownMenuItem>
                                                             )}
                                                             {showEdit && (
@@ -361,9 +421,9 @@ export function ResourcePage({
                     </CardContent>
 
                     {totalRows > 0 && (
-                        <div className="flex items-center justify-between border-t border-border/60 px-6 py-4">
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <span>
+                        <div className="flex flex-col gap-3 border-t border-border/60 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+                            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                                <span className="whitespace-nowrap">
                                     Showing {startIndex + 1}-
                                     {Math.min(startIndex + pageSize, totalRows)} of {totalRows}
                                 </span>
@@ -382,27 +442,29 @@ export function ResourcePage({
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-between gap-2 sm:justify-end">
                                 <Button
                                     variant="outline"
-                                    size="sm"
+                                    size="icon-sm"
                                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                                     disabled={currentPage === 1}
-                                    className="h-8 text-xs"
+                                    className="h-9 w-9"
+                                    aria-label="Previous page"
                                 >
-                                    Previous
+                                    <ChevronLeft className="size-4" />
                                 </Button>
-                                <span className="text-sm text-muted-foreground">
+                                <span className="min-w-24 text-center text-sm font-medium text-muted-foreground">
                                     Page {currentPage} of {totalPages}
                                 </span>
                                 <Button
                                     variant="outline"
-                                    size="sm"
+                                    size="icon-sm"
                                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                                     disabled={currentPage === totalPages}
-                                    className="h-8 text-xs"
+                                    className="h-9 w-9"
+                                    aria-label="Next page"
                                 >
-                                    Next
+                                    <ChevronRight className="size-4" />
                                 </Button>
                             </div>
                         </div>
@@ -410,5 +472,24 @@ export function ResourcePage({
                 </Card>
             </div>
         </main>
+
+        <ViewDialog
+            open={Boolean(viewingRow)}
+            onOpenChange={(open) => !open && setViewingRow(null)}
+            title={viewingRow?.primary ?? ""}
+            description={viewingRow?.secondary}
+            status={viewingRow?.status}
+            icon={viewIcon}
+            fields={viewingRow ? getViewFields(viewingRow) : []}
+            actions={
+                <Button
+                    variant="outline"
+                    onClick={() => setViewingRow(null)}
+                >
+                    Close
+                </Button>
+            }
+        />
+        </>
     )
 }

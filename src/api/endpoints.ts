@@ -26,4 +26,9 @@ export const API_ENDPOINTS = {
 
       // Notifications
       NOTIFICATIONS: "notifications/",
+
+      // Reports and receipts
+      REPORT_PURCHASES_EXPORT: "reports/purchases/export/",
+      REPORT_SALES_EXPORT: "reports/sales/export/",
+      RECEIPT: (uuid: string) => `sales/${uuid}/receipt/`,
 }

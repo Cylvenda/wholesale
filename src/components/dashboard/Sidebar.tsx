@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   BadgePercent,
+  BarChart3,
   Boxes,
   Contact,
   DollarSign,
@@ -69,6 +70,11 @@ const navItems: NavItem[] = [
     label: "Sales",
     href: "/sales",
     icon: ListOrdered,
+  },
+  {
+    label: "Reports",
+    href: "/reports",
+    icon: BarChart3,
   },
   {
     label: "Payments",
@@ -151,7 +157,7 @@ export function Sidebar({
             </div>
             <div>
               <span className="text-lg font-extrabold tracking-tight text-blue-600 dark:text-blue-400">
-                CYL<span className="text-foreground">Stock</span>
+                IMARA <span className="text-foreground">SHOP</span>
               </span>
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
                 Wholesale
@@ -214,4 +220,3 @@ export function Sidebar({
     </>
   )
 }
-

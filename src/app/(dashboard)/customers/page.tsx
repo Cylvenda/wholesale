@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { Users } from "lucide-react"
 import { toast } from "react-toastify"
 import { inventoryService, type Customer, type CustomerSummary } from "@/api/services/inventory.service"
 import { CustomerForm } from "@/components/customers/customer-form"
@@ -121,11 +122,12 @@ export default function CustomersPage() {
                 description="Keep wholesale customer contacts and trading history organized."
                 action="Add customer"
                 columns={["Customer", "Email", "Location", "Status"]}
-                rows={toRows(customers)}
-                summary={summary}
-                loadRows={loadRows}
-                refreshKey={refreshKey}
-                onAction={() => {
+                 rows={toRows(customers)}
+                 summary={summary}
+                 loadRows={loadRows}
+                 refreshKey={refreshKey}
+                 viewIcon={<Users className="size-5" />}
+                 onAction={() => {
                     setEditingCustomer(null)
                     setFormOpen(true)
                 }}

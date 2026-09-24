@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
+import { Tag } from "lucide-react"
 import { toast } from "react-toastify"
 import {
     inventoryService,
@@ -149,6 +150,7 @@ export default function CategoriesPage() {
                 columns={["Category", "Created"]}
                 loadRows={loadRows}
                 refreshKey={refreshKey}
+                viewIcon={<Tag className="size-5" />}
                 onAction={() => openForm()}
                 onEdit={(row) => {
                     const category = {

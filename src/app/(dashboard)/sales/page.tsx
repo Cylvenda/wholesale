@@ -1,6 +1,8 @@
 "use client"
 
 import { useCallback, useState } from "react"
+import { useRouter } from "next/navigation"
+import { Receipt } from "lucide-react"
 import {
     inventoryService,
     type Sale,
@@ -20,11 +22,11 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
 import { ResourcePage } from "@/components/resource-page"
+import { ViewDialog } from "@/components/shared/view-dialog"
 import type { InventoryRow, Status } from "@/lib/inventory-data"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { toast } from "react-toastify"
@@ -45,10 +47,12 @@ function toRows(sales: Sale[]): InventoryRow[] {
             formatDate(sale.sale_date),
         ],
         status: toPaymentStatus(sale.payment_status),
+        raw: sale,
     }))
 }
 
 export default function SalesPage() {
+    const router = useRouter()
     const [sales, setSales] = useState<Sale[]>([])
     const [editingSale, setEditingSale] = useState<Sale | null>(null)
     const [formOpen, setFormOpen] = useState(false)
@@ -96,6 +100,29 @@ export default function SalesPage() {
         if (sale) setViewingSale(sale)
     }
 
+    const handleViewReceipt = (row: InventoryRow) => {
+        router.push(`/receipts/${row.id}`)
+    }
+
+    const handleDownloadReceipt = async (row: InventoryRow) => {
+        try {
+            const report = await inventoryService.downloadReceipt(row.id)
+            const url = URL.createObjectURL(report.blob)
+            const link = document.createElement("a")
+            link.href = url
+            link.download = report.filename
+            link.click()
+            URL.revokeObjectURL(url)
+            toast.success("Receipt downloaded.")
+        } catch {
+            toast.error("Unable to download this receipt.")
+        }
+    }
+
+    const handlePrintReceipt = (row: InventoryRow) => {
+        window.open(`/receipts/${row.id}`, "_blank", "noopener,noreferrer")
+    }
+
     const handleFormSuccess = async () => {
         await loadRows()
         setFormOpen(false)
@@ -131,12 +158,15 @@ export default function SalesPage() {
                     setFormOpen(true)
                 }}
                 onView={handleView}
+                onViewReceipt={handleViewReceipt}
+                onDownloadReceipt={handleDownloadReceipt}
+                onPrintReceipt={handlePrintReceipt}
                 onEdit={handleEdit}
                 onDelete={handleCancel}
             />
 
             <Dialog open={formOpen} onOpenChange={setFormOpen}>
-                <DialogContent className="max-h-[95vh] max-w-6xl w-full flex flex-col overflow-hidden">
+                <DialogContent className="max-h-[95vh] w-[min(96vw,1440px)] max-w-none flex flex-col overflow-hidden">
                     <DialogHeader>
                         <DialogTitle>
                             {editingSale ? "Edit sale" : "Record sale"}
@@ -156,77 +186,34 @@ export default function SalesPage() {
                 </DialogContent>
             </Dialog>
 
-            <Dialog
-                open={Boolean(viewingSale)}
-                onOpenChange={() => setViewingSale(null)}
-            >
-                <DialogContent className="max-h-[95vh] max-w-6xl w-full flex flex-col overflow-hidden">
-                    <DialogHeader>
-                        <DialogTitle>
-                            #{viewingSale?.uuid.slice(0, 8).toUpperCase()}
-                        </DialogTitle>
-                        <DialogDescription>
-                            Sale details and line items.
-                        </DialogDescription>
-                    </DialogHeader>
-                    {viewingSale && (
-                        <div className="flex-1 overflow-y-auto space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-     
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Date
-                                    </p>
-                                    <p className="mt-1">
-                                        {formatDate(viewingSale.sale_date)}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Status
-                                    </p>
-                                    <p className="mt-1 capitalize">
-                                        {viewingSale.status}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Payment status
-                                    </p>
-                                    <p className="mt-1 capitalize">
-                                        {viewingSale.payment_status}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Subtotal
-                                    </p>
-                                    <p className="mt-1">
-                                        {formatCurrency(viewingSale.subtotal)}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Total
-                                    </p>
-                                    <p className="mt-1 font-semibold">
-                                        {formatCurrency(viewingSale.total)}
-                                    </p>
-                                </div>
-                            </div>
-                            <div>
-                                <p className="text-xs font-medium text-muted-foreground">
-                                    Items
-                                </p>
-                                <div className="mt-2 space-y-2">
+            {viewingSale && (
+                <ViewDialog
+                    open={Boolean(viewingSale)}
+                    onOpenChange={() => setViewingSale(null)}
+                    title={`#${viewingSale.uuid.slice(0, 8).toUpperCase()}`}
+                    description={viewingSale.customer_name || undefined}
+                    status={toPaymentStatus(viewingSale.payment_status)}
+                    icon={<Receipt className="size-5" />}
+                    fields={[
+                        { label: "Customer", value: viewingSale.customer_name || "—" },
+                        { label: "Date", value: formatDate(viewingSale.sale_date) },
+                        { label: "Status", status: viewingSale.status as Status },
+                        { label: "Payment status", status: toPaymentStatus(viewingSale.payment_status) },
+                        { label: "Subtotal", value: formatCurrency(viewingSale.subtotal) },
+                        { label: "Total", value: formatCurrency(viewingSale.total) },
+                    ]}
+                    sections={[
+                        {
+                            label: "Items",
+                            content: (
+                                <div className="space-y-2">
                                     {viewingSale.items.map((item) => (
                                         <div
                                             key={item.uuid}
                                             className="flex justify-between text-sm"
                                         >
                                             <span>
-                                                {item.product_name} ×{" "}
-                                                {item.quantity}
+                                                {item.product_name} × {item.quantity}
                                             </span>
                                             <span className="text-muted-foreground">
                                                 {formatCurrency(item.subtotal)}
@@ -234,19 +221,19 @@ export default function SalesPage() {
                                         </div>
                                     ))}
                                 </div>
-                            </div>
-                        </div>
-                    )}
-                    <DialogFooter>
+                            ),
+                        },
+                    ]}
+                    actions={
                         <Button
                             variant="outline"
                             onClick={() => setViewingSale(null)}
                         >
                             Close
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    }
+                />
+            )}
 
             <AlertDialog
                 open={cancelOpen}

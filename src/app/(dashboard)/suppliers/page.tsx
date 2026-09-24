@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { Truck } from "lucide-react"
 import { toast } from "react-toastify"
 import {
     inventoryService,
@@ -123,11 +124,12 @@ export default function SuppliersPage() {
                 description="Manage supplier contacts and wholesale purchasing relationships."
                 action="Add supplier"
                 columns={["Supplier", "Email", "Address", "Status"]}
-                rows={toRows(suppliers)}
-                summary={summary}
-                loadRows={loadRows}
-                refreshKey={refreshKey}
-                onAction={() => {
+                 rows={toRows(suppliers)}
+                 summary={summary}
+                 loadRows={loadRows}
+                 refreshKey={refreshKey}
+                 viewIcon={<Truck className="size-5" />}
+                 onAction={() => {
                     setEditingSupplier(null)
                     setFormOpen(true)
                 }}

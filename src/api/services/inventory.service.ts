@@ -70,6 +70,37 @@ export type UnitPayload = {
     quantity?: number
 }
 
+export type Product = {
+    uuid: string
+    brand: string
+    brand_name: string
+    name: string
+    description: string
+    unit: string
+    unit_name: string
+    buying_price: string
+    selling_price: string
+    is_active: boolean
+    created_at: string
+    updated_at: string
+}
+
+export type ProductPayload = {
+    brand: string
+    unit: string
+    name: string
+    description: string
+    buying_price: string | number
+    selling_price: string | number
+    is_active?: boolean
+}
+
+export type ProductSummary = {
+    total_products: number
+    active_products: number
+    total_stock_value: number
+}
+
 export type Stock = {
     uuid: string
     product: string
@@ -244,6 +275,72 @@ export type DashboardStats = {
     }[]
 }
 
+export type ReportFilters = {
+    from?: string
+    to?: string
+    product?: string
+    supplier?: string
+    customer?: string
+}
+
+export type ReceiptBusiness = {
+    name: string
+    address: string
+    phone: string
+    email: string
+    tax_number: string
+    receipt_footer: string
+}
+
+export type ReceiptSale = {
+    uuid: string
+    receipt_number: string
+    sale_date: string
+    cashier: string
+    customer: string
+    payment_status: "unpaid" | "partial" | "paid"
+}
+
+export type ReceiptItem = {
+    uuid: string
+    product_name: string
+    quantity: number
+    unit_price: string
+    discount: string
+    line_total: string
+}
+
+export type ReceiptTotals = {
+    subtotal: string
+    discount: string
+    grand_total: string
+    amount_paid: string
+    outstanding_balance: string
+}
+
+export type ReceiptPayment = {
+    uuid: string
+    amount: string
+    method: string
+    reference: string
+    payment_date: string
+}
+
+export type ReceiptData = {
+    business: ReceiptBusiness
+    sale: ReceiptSale
+    items: ReceiptItem[]
+    totals: ReceiptTotals
+    payments: ReceiptPayment[]
+    payment_methods: string[]
+    currency: string
+}
+
+export type ReportDownload = {
+    blob: Blob
+    filename: string
+}
+
 export type StockSummary = {
     stocked_products: number
     total_quantity: number
@@ -270,6 +367,33 @@ export type SupplierSummary = {
     total_suppliers: number
     active_suppliers: number
     total_purchases: number
+}
+
+function reportQuery(filters: ReportFilters) {
+    const params = new URLSearchParams()
+
+    Object.entries(filters).forEach(([key, value]) => {
+        if (value) params.set(key, value)
+    })
+
+    const query = params.toString()
+    return query ? `?${query}` : ""
+}
+
+function downloadFilename(header: unknown, fallback: string) {
+    const match = String(header || "").match(/filename="?([^"]+)"?/i)
+    return match?.[1] || fallback
+}
+
+async function download(endpoint: string, fallbackFilename: string): Promise<ReportDownload> {
+    const response = await api.get(endpoint, { responseType: "blob" })
+    return {
+        blob: response.data as Blob,
+        filename: downloadFilename(
+            response.headers["content-disposition"],
+            fallbackFilename
+        ),
+    }
 }
 
 /* ------------------------------------------------------------------ */
@@ -326,6 +450,16 @@ export const inventoryService = {
     updateCategory: (uuid: string, payload: CategoryPayload) =>
         update<Category, CategoryPayload>(`categories/${uuid}/`, payload),
     deleteCategory: (uuid: string) => remove(`categories/${uuid}/`),
+
+    /* --- Products --- */
+    listProducts: () => list<Product>("products/"),
+    getProduct: (uuid: string) => get<Product>(`products/${uuid}/`),
+    createProduct: (payload: ProductPayload) =>
+        create<Product, ProductPayload>("products/", payload),
+    updateProduct: (uuid: string, payload: ProductPayload) =>
+        update<Product, ProductPayload>(`products/${uuid}/`, payload),
+    deleteProduct: (uuid: string) => remove(`products/${uuid}/`),
+    getProductsSummary: () => get<ProductSummary>("products/summary/"),
 
     /* --- Brands --- */
     listBrands: () => list<Brand>("brands/"),
@@ -418,4 +552,21 @@ export const inventoryService = {
         list<ExpenseCategory>("expense-categories/"),
     createExpenseCategory: (payload: ExpenseCategoryPayload) =>
         create<ExpenseCategory, ExpenseCategoryPayload>("expense-categories/", payload),
+
+    /* --- Reports and receipts --- */
+    downloadPurchaseReport: (filters: ReportFilters = {}) =>
+        download(`reports/purchases/export/${reportQuery(filters)}`, "purchased-items.xlsx"),
+
+    downloadSalesReport: (filters: ReportFilters = {}) =>
+        download(`reports/sales/export/${reportQuery(filters)}`, "completed-sales.xlsx"),
+
+    getReceipt: async (uuid: string): Promise<ReceiptData> => {
+        const response = await api.get<{ success: boolean; data: ReceiptData }>(
+            `sales/${uuid}/receipt/?format=json`
+        )
+        return response.data.data
+    },
+
+    downloadReceipt: (uuid: string) =>
+        download(`sales/${uuid}/receipt/`, `receipt-${uuid}.pdf`),
 }

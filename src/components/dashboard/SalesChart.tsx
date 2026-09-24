@@ -139,14 +139,14 @@ export function SalesChart({ data, selectedPeriod = "7d", onPeriodChange }: Sale
                 </select>
             </CardHeader>
 
-            <CardContent className="p-6 pt-8">
-                <div className="h-[340px] w-full">
+            <CardContent className="p-4 pt-6 sm:p-6 sm:pt-8">
+                <div className="h-[280px] w-full sm:h-[340px]">
                     {isMounted && chartData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart
                                 data={chartData}
-                                margin={{ top: 15, right: 15, left: -20, bottom: 0 }}
-                                barSize={28}
+                                margin={{ top: 12, right: 8, left: -18, bottom: 0 }}
+                                barSize={24}
                             >
                                 <CartesianGrid
                                     strokeDasharray="4 4"
@@ -165,6 +165,7 @@ export function SalesChart({ data, selectedPeriod = "7d", onPeriodChange }: Sale
                                         fontSize: 12,
                                         fontWeight: 500,
                                     }}
+                                    minTickGap={24}
                                 />
 
                                 <YAxis
@@ -184,24 +185,16 @@ export function SalesChart({ data, selectedPeriod = "7d", onPeriodChange }: Sale
 
                                 <Bar
                                     dataKey="sales"
-                                    fill="#3b82f6"
+                                    fill="#2563eb"
                                     radius={[4, 4, 0, 0]}
-                                    activeBar={{
-                                        fill: "#2563eb",
-                                        stroke: "#ffffff",
-                                        strokeWidth: 2,
-                                    }}
+                                    activeBar={{ fill: "#1d4ed8", stroke: "#ffffff", strokeWidth: 2 }}
                                 />
 
                                 <Bar
                                     dataKey="purchases"
-                                    fill="#f59e0b"
+                                    fill="#d97706"
                                     radius={[4, 4, 0, 0]}
-                                    activeBar={{
-                                        fill: "#d97706",
-                                        stroke: "#ffffff",
-                                        strokeWidth: 2,
-                                    }}
+                                    activeBar={{ fill: "#b45309", stroke: "#ffffff", strokeWidth: 2 }}
                                 />
 
                                 <Legend

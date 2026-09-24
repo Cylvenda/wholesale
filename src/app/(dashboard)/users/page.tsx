@@ -1,10 +1,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import {
-    UserCheck,
-    UserX,
-} from "lucide-react"
+import { UserCheck, UserX, User } from "lucide-react"
 import { toast } from "react-toastify"
 import { userServices, type UserAdminResponse } from "@/api/services/user.service"
 import { UserForm } from "@/components/users/user-form"
@@ -22,14 +19,14 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
 import { ResourcePage } from "@/components/resource-page"
-import { Button } from "@/components/ui/button"
+import { ViewDialog } from "@/components/shared/view-dialog"
 import type { InventoryRow, Status } from "@/lib/inventory-data"
 import { formatDate } from "@/lib/format"
+import { Button } from "@/components/ui/button"
 
 function toUserRole(role: string): Status {
     return role === "admin" || role === "manager" ? "active" : "inactive"
@@ -179,109 +176,52 @@ export default function UsersPage() {
                 </DialogContent>
             </Dialog>
 
-            <Dialog
-                open={viewOpen}
-                onOpenChange={setViewOpen}
-            >
-                <DialogContent className="max-w-2xl p-6">
-                    <DialogHeader>
-                        <DialogTitle>
-                            {viewingUser
-                                ? `${viewingUser.first_name} ${viewingUser.last_name}`.trim()
-                                : "User details"}
-                        </DialogTitle>
-                        <DialogDescription>
-                            Account details and role information.
-                        </DialogDescription>
-                    </DialogHeader>
-                    {viewingUser && (
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Email
-                                    </p>
-                                    <p className="mt-1">{viewingUser.email}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Phone
-                                    </p>
-                                    <p className="mt-1">{viewingUser.phone || "—"}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Role
-                                    </p>
-                                    <p className="mt-1 capitalize">
-                                        {ROLE_LABELS[viewingUser.role] ??
-                                            viewingUser.role}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Status
-                                    </p>
-                                    <p className="mt-1 capitalize">
-                                        {viewingUser.is_active
-                                            ? "Active"
-                                            : "Inactive"}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Joined
-                                    </p>
-                                    <p className="mt-1">
-                                        {formatDate(viewingUser.date_joined)}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Staff
-                                    </p>
-                                    <p className="mt-1">
-                                        {viewingUser.is_staff
-                                            ? "Yes"
-                                            : "No"}
-                                    </p>
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => setViewOpen(false)}
-                                >
-                                    Close
-                                </Button>
-                                <Button
-                                    variant={
-                                        viewingUser.is_active
-                                            ? "outline"
-                                            : "default"
-                                    }
-                                    onClick={() => {
-                                        void handleToggleActive(viewingUser)
-                                        setViewOpen(false)
-                                    }}
-                                >
-                                    {viewingUser.is_active ? (
-                                        <>
-                                            <UserX className="mr-2 size-4 text-blue-600" />
-                                            Deactivate
-                                        </>
-                                    ) : (
-                                        <>
-                                            <UserCheck className="mr-2 size-4 text-blue-600" />
-                                            Activate
-                                        </>
-                                    )}
-                                </Button>
-                            </DialogFooter>
-                        </div>
-                    )}
-                </DialogContent>
-            </Dialog>
+            {viewingUser && (
+                <ViewDialog
+                    open={viewOpen}
+                    onOpenChange={setViewOpen}
+                    title={`${viewingUser.first_name} ${viewingUser.last_name}`.trim() || "User details"}
+                    description={viewingUser.email}
+                    status={viewingUser.is_active ? "active" : "inactive"}
+                    icon={<User className="size-5" />}
+                    fields={[
+                        { label: "Email", value: viewingUser.email },
+                        { label: "Phone", value: viewingUser.phone || "—" },
+                        { label: "Role", value: ROLE_LABELS[viewingUser.role] ?? viewingUser.role },
+                        { label: "Joined", value: formatDate(viewingUser.date_joined) },
+                        { label: "Staff access", value: viewingUser.is_staff ? "Yes" : "No" },
+                    ]}
+                    actions={
+                        <>
+                            <Button
+                                variant="outline"
+                                onClick={() => setViewOpen(false)}
+                            >
+                                Close
+                            </Button>
+                            <Button
+                                variant={viewingUser.is_active ? "outline" : "default"}
+                                onClick={() => {
+                                    void handleToggleActive(viewingUser)
+                                    setViewOpen(false)
+                                }}
+                            >
+                                {viewingUser.is_active ? (
+                                    <>
+                                        <UserX className="mr-2 size-4 text-blue-600" />
+                                        Deactivate
+                                    </>
+                                ) : (
+                                    <>
+                                        <UserCheck className="mr-2 size-4 text-blue-600" />
+                                        Activate
+                                    </>
+                                )}
+                            </Button>
+                        </>
+                    }
+                />
+            )}
 
             <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
                 <AlertDialogContent>

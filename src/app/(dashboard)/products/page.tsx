@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Eye, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { Eye, MoreHorizontal, Package, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { toast } from "react-toastify"
 import { productService, type Product } from "@/api/services/product.service"
 import { ProductForm } from "@/components/products/product-form"
@@ -27,7 +27,6 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
@@ -41,6 +40,7 @@ import { Input } from "@/components/ui/input"
 import { PageHeader } from "@/components/shared/page-header"
 import { ErrorState, EmptyState, TableSkeleton } from "@/components/shared/table-states"
 import { StatusBadge } from "@/components/shared/status-badge"
+import { ViewDialog } from "@/components/shared/view-dialog"
 import {
     Table,
     TableBody,
@@ -312,92 +312,47 @@ export default function ProductsPage() {
                 </Dialog>
 
                 {/* View Dialog */}
-                <Dialog
-                    open={Boolean(viewingProduct)}
-                    onOpenChange={() => setViewingProduct(null)}
-                >
-                    <DialogContent className="sm:max-w-2xl p-6">
-                        <DialogHeader>
-                            <DialogTitle>{viewingProduct?.name}</DialogTitle>
-                            <DialogDescription>
-                                Product details and pricing information.
-                            </DialogDescription>
-                        </DialogHeader>
-                        {viewingProduct && (
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-xs font-medium text-muted-foreground">
-                                            Brand
-                                        </p>
-                                        <p className="mt-1">
-                                            {viewingProduct.brand_name || "—"}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-medium text-muted-foreground">
-                                            Unit
-                                        </p>
-                                        <p className="mt-1">
-                                            {viewingProduct.unit_name || "—"}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-medium text-muted-foreground">
-                                            Buying price
-                                        </p>
-                                        <p className="mt-1">
-                                            {formatCurrency(
-                                                viewingProduct.buying_price
-                                            )}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-medium text-muted-foreground">
-                                            Selling price
-                                        </p>
-                                        <p className="mt-1">
-                                            {formatCurrency(
-                                                viewingProduct.selling_price
-                                            )}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Description
+                {viewingProduct && (
+                    <ViewDialog
+                        open={Boolean(viewingProduct)}
+                        onOpenChange={() => setViewingProduct(null)}
+                        title={viewingProduct.name}
+                        description={viewingProduct.brand_name || undefined}
+                        status={viewingProduct.is_active ? "active" : "inactive"}
+                        icon={<Package className="size-5" />}
+                        fields={[
+                            { label: "Brand", value: viewingProduct.brand_name || "—" },
+                            { label: "Unit", value: viewingProduct.unit_name || "—" },
+                            { label: "Buying price", value: formatCurrency(viewingProduct.buying_price) },
+                            { label: "Selling price", value: formatCurrency(viewingProduct.selling_price) },
+                        ]}
+                        sections={[
+                            {
+                                label: "Description",
+                                content: (
+                                    <p className="text-sm text-foreground">
+                                        {viewingProduct.description || "No description provided."}
                                     </p>
-                                    <p className="mt-1">
-                                        {viewingProduct.description ||
-                                            "No description provided."}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        Status
-                                    </p>
-                                    <p className="mt-1">
-                                        <StatusBadge
-                                            status={
-                                                viewingProduct.is_active
-                                                    ? "active"
-                                                    : "inactive"
-                                            }
-                                        />
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-                        <DialogFooter>
-                            <Button
-                                variant="outline"
-                                onClick={() => setViewingProduct(null)}
-                            >
-                                Close
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                                ),
+                            },
+                        ]}
+                        actions={
+                            <>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setViewingProduct(null)}
+                                >
+                                    Close
+                                </Button>
+                                <Button
+                                    onClick={() => openEdit(viewingProduct)}
+                                >
+                                    Edit product
+                                </Button>
+                            </>
+                        }
+                    />
+                )}
 
                 {/* Delete Confirmation */}
                 <AlertDialog

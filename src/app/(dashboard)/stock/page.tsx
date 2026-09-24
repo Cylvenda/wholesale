@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { Warehouse } from "lucide-react"
 import {
     inventoryService,
     type Stock,
@@ -102,6 +103,7 @@ export default function StockPage() {
                 summary={summary}
                 loadRows={loadRows}
                 refreshKey={refreshKey}
+                viewIcon={<Warehouse className="size-5" />}
                 onAction={() => {
                     setAdjustmentOpen(true)
                 }}

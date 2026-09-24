@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
+import { Ruler } from "lucide-react"
 import { toast } from "react-toastify"
 import {
     inventoryService,
@@ -156,6 +157,7 @@ export default function UnitsPage() {
                 columns={["Unit", "Quantity", "Created"]}
                 loadRows={loadRows}
                 refreshKey={refreshKey}
+                viewIcon={<Ruler className="size-5" />}
                 onAction={openCreate}
                 onEdit={(row) => {
                     const unit: Unit = {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { CreditCard } from "lucide-react"
 import {
     inventoryService,
     type Payment,
@@ -25,9 +26,11 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { ResourcePage } from "@/components/resource-page"
+import { ViewDialog } from "@/components/shared/view-dialog"
 import type { InventoryRow } from "@/lib/inventory-data"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { toast } from "react-toastify"
+import { Button } from "@/components/ui/button"
 
 function toRows(payments: Payment[]): InventoryRow[] {
     return payments.map((payment) => ({
@@ -71,6 +74,7 @@ function toSummary(
 export default function PaymentsPage() {
     const [payments, setPayments] = useState<Payment[]>([])
     const [editingPayment, setEditingPayment] = useState<Payment | null>(null)
+    const [viewingPayment, setViewingPayment] = useState<Payment | null>(null)
     const [formOpen, setFormOpen] = useState(false)
     const [deletingPayment, setDeletingPayment] = useState<Payment | null>(null)
     const [summary, setSummary] = useState<
@@ -113,6 +117,11 @@ export default function PaymentsPage() {
         if (payment) setDeletingPayment(payment)
     }
 
+    const handleView = (row: InventoryRow) => {
+        const payment = payments.find((p) => p.uuid === row.id)
+        if (payment) setViewingPayment(payment)
+    }
+
     const handleFormSuccess = async () => {
         await loadRows()
         setFormOpen(false)
@@ -143,13 +152,50 @@ export default function PaymentsPage() {
                 rows={toRows(payments)}
                 loadRows={loadRows}
                 refreshKey={refreshKey}
-                onAction={() => {
-                    setEditingPayment(null)
-                    setFormOpen(true)
-                }}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-            />
+                 onAction={() => {
+                     setEditingPayment(null)
+                     setFormOpen(true)
+                 }}
+                 onView={handleView}
+                 onEdit={handleEdit}
+                 onDelete={handleDelete}
+             />
+
+            {viewingPayment && (
+                <ViewDialog
+                    open={Boolean(viewingPayment)}
+                    onOpenChange={() => setViewingPayment(null)}
+                    title={`#${viewingPayment.uuid.slice(0, 8).toUpperCase()}`}
+                    description={viewingPayment.customer_name || undefined}
+                    status="paid"
+                    icon={<CreditCard className="size-5" />}
+                    fields={[
+                        { label: "Customer", value: viewingPayment.customer_name || "—" },
+                        { label: "Amount", value: formatCurrency(viewingPayment.amount) },
+                        { label: "Method", value: viewingPayment.method.replaceAll("_", " ") },
+                        { label: "Reference", value: viewingPayment.reference || "—" },
+                        { label: "Date", value: formatDate(viewingPayment.payment_date) },
+                    ]}
+                    sections={[
+                        {
+                            label: "Notes",
+                            content: (
+                                <p className="text-sm text-foreground">
+                                    {viewingPayment.notes || "No notes provided."}
+                                </p>
+                            ),
+                        },
+                    ]}
+                    actions={
+                        <Button
+                            variant="outline"
+                            onClick={() => setViewingPayment(null)}
+                        >
+                            Close
+                        </Button>
+                    }
+                />
+            )}
 
             <Dialog open={formOpen} onOpenChange={setFormOpen}>
                 <DialogContent className="max-w-2xl p-6">

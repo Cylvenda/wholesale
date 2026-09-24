@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
+import { ReceiptText } from "lucide-react"
 import { toast } from "react-toastify"
 import {
     inventoryService,
@@ -112,9 +113,10 @@ export default function ExpensesPage() {
                 columns={["Category", "Date", "Amount", "Description"]}
                 rows={toRows(expenses)}
                 summary={summaryData}
-                loadRows={loadRows}
-                refreshKey={refreshKey}
-                onAction={() => {
+                 loadRows={loadRows}
+                 refreshKey={refreshKey}
+                 viewIcon={<ReceiptText className="size-5" />}
+                 onAction={() => {
                     setEditingExpense(null)
                     setFormOpen(true)
                 }}

@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
+import { Award } from "lucide-react"
 import { toast } from "react-toastify"
 import {
     inventoryService,
@@ -160,6 +161,7 @@ export default function BrandsPage() {
                 columns={["Brand", "Created"]}
                 loadRows={loadRows}
                 refreshKey={refreshKey}
+                viewIcon={<Award className="size-5" />}
                 onAction={openCreate}
                 onEdit={(row) => {
                     const brand: Brand = {
