@@ -2,8 +2,8 @@ const apiRootFromEnv = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:800
 
 
 export const API_ENDPOINTS = {
-     // root api endpoint
-     API_ROOT: apiRootFromEnv,
+      // root api endpoint
+      API_ROOT: apiRootFromEnv,
 
       // User Authentication Endpoints
       USER_REGISTRATION: "auth/users/",
@@ -31,4 +31,5 @@ export const API_ENDPOINTS = {
       REPORT_PURCHASES_EXPORT: "reports/purchases/export/",
       REPORT_SALES_EXPORT: "reports/sales/export/",
       RECEIPT: (uuid: string) => `sales/${uuid}/receipt/`,
+      PURCHASE_RECEIPT: (uuid: string) => `purchases/${uuid}/receipt/`,
 }

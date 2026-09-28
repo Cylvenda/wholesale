@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
+import { useRouter } from "next/navigation"
 import { ShoppingBag } from "lucide-react"
 import {
     inventoryService,
@@ -53,10 +54,12 @@ function toRows(
             formatDate(purchase.purchase_date),
         ],
         status: toPurchaseStatus(purchase.status),
+        raw: purchase,
     }))
 }
 
 export default function PurchasesPage() {
+    const router = useRouter()
     const [purchases, setPurchases] = useState<PurchaseType[]>([])
     const [editingPurchase, setEditingPurchase] = useState<PurchaseType | null>(null)
     const [formOpen, setFormOpen] = useState(false)
@@ -113,6 +116,29 @@ export default function PurchasesPage() {
         if (purchase) setViewingPurchase(purchase)
     }
 
+    const handleViewReceipt = (row: InventoryRow) => {
+        router.push(`/receipts/purchases/${row.id}`)
+    }
+
+    const handleDownloadReceipt = async (row: InventoryRow) => {
+        try {
+            const report = await inventoryService.downloadPurchaseReceipt(row.id)
+            const url = URL.createObjectURL(report.blob)
+            const link = document.createElement("a")
+            link.href = url
+            link.download = report.filename
+            link.click()
+            URL.revokeObjectURL(url)
+            toast.success("Purchase receipt downloaded.")
+        } catch {
+            toast.error("Unable to download this purchase receipt.")
+        }
+    }
+
+    const handlePrintReceipt = (row: InventoryRow) => {
+        window.open(`/receipts/purchases/${row.id}`, "_blank", "noopener,noreferrer")
+    }
+
     const handleFormSuccess = async () => {
         await loadRows()
         setFormOpen(false)
@@ -151,6 +177,9 @@ export default function PurchasesPage() {
                     setFormOpen(true)
                 }}
                 onView={handleView}
+                onViewReceipt={handleViewReceipt}
+                onDownloadReceipt={handleDownloadReceipt}
+                onPrintReceipt={handlePrintReceipt}
                 onEdit={handleEdit}
                 onDelete={handleCancel}
             />

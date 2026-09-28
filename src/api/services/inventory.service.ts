@@ -305,6 +305,7 @@ export type ReceiptItem = {
     uuid: string
     product_name: string
     quantity: number
+    unit: string
     unit_price: string
     discount: string
     line_total: string
@@ -335,6 +336,23 @@ export type ReceiptData = {
     payment_methods: string[]
     currency: string
 }
+
+export type PurchaseReceiptData = {
+    business: ReceiptBusiness
+    purchase: {
+        uuid: string
+        receipt_number: string
+        supplier_invoice_number: string
+        purchase_date: string
+        receiver: string
+        supplier: string
+    }
+    items: ReceiptItem[]
+    totals: Pick<ReceiptTotals, "subtotal" | "grand_total">
+    currency: string
+}
+
+export type PrintableReceiptData = ReceiptData | PurchaseReceiptData
 
 export type ReportDownload = {
     blob: Blob
@@ -569,4 +587,14 @@ export const inventoryService = {
 
     downloadReceipt: (uuid: string) =>
         download(`sales/${uuid}/receipt/`, `receipt-${uuid}.pdf`),
+
+    getPurchaseReceipt: async (uuid: string): Promise<PurchaseReceiptData> => {
+        const response = await api.get<{ success: boolean; data: PurchaseReceiptData }>(
+            `purchases/${uuid}/receipt/?format=json`
+        )
+        return response.data.data
+    },
+
+    downloadPurchaseReceipt: (uuid: string) =>
+        download(`purchases/${uuid}/receipt/`, `purchase-receipt-${uuid}.pdf`),
 }
