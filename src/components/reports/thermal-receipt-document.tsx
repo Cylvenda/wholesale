@@ -18,18 +18,6 @@ function formatMoney(value: string | number, currency: string) {
      return `${currency} ${amount}`
 }
 
-function formatDateTime(value: string) {
-     return new Intl.DateTimeFormat("en-GB", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hourCycle: "h23",
-     }).format(new Date(value))
-}
-
 export function ThermalReceiptDocument({
      receipt,
      onDownload,
@@ -38,10 +26,16 @@ export function ThermalReceiptDocument({
      const isSale = "sale" in receipt
      const document = isSale ? receipt.sale : receipt.purchase
      const transactionDate = isSale ? receipt.sale.sale_date : receipt.purchase.purchase_date
-     const partyLabel = isSale ? "Customer" : "Supplier"
      const partyName = isSale ? receipt.sale.customer : receipt.purchase.supplier
-     const staffLabel = isSale ? "Cashier" : "Received By"
      const staffName = isSale ? receipt.sale.cashier : receipt.purchase.receiver
+     const receiptDate = new Date(transactionDate)
+     const cashAmount = isSale
+          ? receipt.payments
+               .filter((payment) => payment.method === "cash")
+               .reduce((total, payment) => total + Number(payment.amount), 0)
+          : null
+     const totalItems = receipt.items.reduce((total, item) => total + Number(item.quantity), 0)
+     const status = isSale ? receipt.sale.payment_status : "received"
 
      return (
           <>
@@ -60,15 +54,13 @@ export function ThermalReceiptDocument({
 
                <article className="thermal-receipt">
                     <header className="receipt-heading">
-                         <div>{isSale ? "Invoice" : "Purchase"}</div>
+                         <strong>IMARA SHOP</strong>
+                         <div>DAR ES SALAAM</div>
                     </header>
 
                     <section className="receipt-business">
-                         <strong>{receipt.business.name || "IMARA SHOP"}</strong>
                          {[
-                              receipt.business.tax_number,
                               receipt.business.address,
-                              receipt.business.phone,
                               receipt.business.email,
                          ].filter(Boolean).map((line, index) => (
                               <div key={`${index}-${line}`}>{line}</div>
@@ -77,32 +69,39 @@ export function ThermalReceiptDocument({
 
                     <div className="receipt-rule">------------------------------------------------</div>
                     <section className="receipt-meta">
-                         <ReceiptRow label="Document No.:" value={document.receipt_number} />
-                         <ReceiptRow label="Date:" value={formatDateTime(transactionDate)} />
-                         <ReceiptRow label={`${partyLabel}:`} value={partyName} />
-                         <ReceiptRow label={`${staffLabel}:`} value={staffName || "-"} />
+                         <ReceiptRow label="Bill No" value={document.receipt_number} />
+                         <ReceiptRow label="Tel No" value={receipt.business.phone || "N/A"} />
+                         <ReceiptRow label="Bill By" value={staffName || "N/A"} />
+                         <ReceiptRow label="Date" value={receiptDate.toLocaleDateString("en-GB")} />
+                         <ReceiptRow label="VAT Reg" value={receipt.business.tax_number || "N/A"} />
+                         <ReceiptRow label="Tax" value="N/A" />
+                         <ReceiptRow label="Counter" value="N/A" />
+                         <ReceiptRow label="Time" value={receiptDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })} />
                          {!isSale && receipt.purchase.supplier_invoice_number && (
-                              <ReceiptRow label="Supplier Inv.:" value={receipt.purchase.supplier_invoice_number} />
+                              <ReceiptRow label="Supplier Inv" value={receipt.purchase.supplier_invoice_number} />
                          )}
                     </section>
                     <div className="receipt-rule">------------------------------------------------</div>
 
                     <section className="receipt-items">
                          <div className="receipt-item-heading">
-                              <span>DESC</span>
-                              <span>U.PRICE</span>
-                              <span>DISC</span>
+                              <span>NO.</span>
+                              <span>PRODUCT</span>
+                              <span>QTY</span>
+                              <span>PRICE</span>
                               <span>AMOUNT</span>
                          </div>
-                         <div className="receipt-qty-label">QTY</div>
-                         {receipt.items.map((item) => (
+                         {receipt.items.map((item, index) => (
                               <div className="receipt-item" key={item.uuid}>
-                                   <div className="receipt-product-name">{item.product_name}</div>
-                                   <div className="receipt-item-values">
-                                        <span>{Number(item.quantity).toFixed(2)} {item.unit}</span>
+                                   <div className="receipt-item-row">
+                                        <span>{index + 1}</span>
+                                        <span className="receipt-product-name">{item.product_name}</span>
+                                        <span>{Number(item.quantity).toLocaleString("en-TZ")}</span>
                                         <span>{formatMoney(item.unit_price, receipt.currency)}</span>
-                                        <span>{formatMoney(item.discount, receipt.currency)}</span>
                                         <span>{formatMoney(item.line_total, receipt.currency)}</span>
+                                   </div>
+                                   <div className="receipt-item-description">
+                                        <span>{item.unit}</span>
                                    </div>
                               </div>
                          ))}
@@ -110,32 +109,35 @@ export function ThermalReceiptDocument({
 
                     <div className="receipt-rule">------------------------------------------------</div>
                     <section className="receipt-totals">
-                         <ReceiptRow label="Sub Total:" value={formatMoney(receipt.totals.subtotal, receipt.currency)} />
-                         {isSale && (
-                              <ReceiptRow label="Discount:" value={formatMoney(receipt.totals.discount, receipt.currency)} />
+                         <ReceiptRow label="Total" value={formatMoney(receipt.totals.grand_total, receipt.currency)} strong />
+                         <ReceiptRow label="Cash" value={cashAmount === null ? "N/A" : formatMoney(cashAmount, receipt.currency)} />
+                         <ReceiptRow label="Change" value="N/A" />
+                         <ReceiptRow label="Total Items" value={String(totalItems)} />
+                         {isSale && Number(receipt.totals.discount) > 0 && (
+                              <ReceiptRow label="Discount" value={formatMoney(receipt.totals.discount, receipt.currency)} />
                          )}
-                         <ReceiptRow
-                              label={isSale ? "Total:" : "Total Purchase:"}
-                              value={formatMoney(receipt.totals.grand_total, receipt.currency)}
-                              strong
-                         />
-                         {isSale && (
-                              <>
-                                   {receipt.payments.map((payment) => (
+                         {isSale && Number(receipt.totals.outstanding_balance) > 0 && (
+                              <ReceiptRow label="Balance" value={formatMoney(receipt.totals.outstanding_balance, receipt.currency)} />
+                         )}
+                         {isSale && receipt.payments.some((payment) => payment.method !== "cash") && (
+                              receipt.payments
+                                   .filter((payment) => payment.method !== "cash")
+                                   .map((payment) => (
                                         <ReceiptRow
                                              key={payment.uuid}
-                                             label={`${payment.method.replace(/_/g, " ")}:`}
+                                             label={payment.method.replace(/_/g, " ")}
                                              value={formatMoney(payment.amount, receipt.currency)}
                                         />
-                                   ))}
-                                   <ReceiptRow label="Paid:" value={formatMoney(receipt.totals.amount_paid, receipt.currency)} />
-                                   <ReceiptRow label="Balance:" value={formatMoney(receipt.totals.outstanding_balance, receipt.currency)} />
-                              </>
+                                   ))
                          )}
                     </section>
                     <div className="receipt-rule">------------------------------------------------</div>
-                    <footer className="receipt-footer">
-                         {isSale ? receipt.business.receipt_footer || "Thank you for your business." : "GOODS RECEIVED"}
+                    <footer className="receipt-customer">
+                         <strong>Taarifa Za Mteja</strong>
+                         <ReceiptRow label={isSale ? "JINA LA MTEJA" : "JINA LA MSAMBAZAJI"} value={partyName} />
+                         <ReceiptRow label="Status" value={status} />
+                         <div className="receipt-notice">Hii Sio Stakabadhi Halali Ya Tra</div>
+                         <div className="receipt-closing">****Issue Note From S I C****</div>
                     </footer>
                </article>
 
@@ -157,29 +159,36 @@ export function ThermalReceiptDocument({
                     font: 10px/1.35 "Courier New", Courier, monospace;
                     overflow-wrap: anywhere;
                 }
-                .receipt-heading, .receipt-business, .receipt-footer { text-align: center; }
-                .receipt-heading { margin-bottom: 10px; }
-                .receipt-business { margin-bottom: 8px; }
-                .receipt-business strong { display: block; font-size: 12px; font-weight: 700; }
+                    .receipt-heading, .receipt-business, .receipt-customer { text-align: center; }
+                    .receipt-heading { margin-bottom: 8px; }
+                    .receipt-heading strong { display: block; font-size: 13px; }
+                    .receipt-business { margin-bottom: 8px; }
                 .receipt-rule { height: 14px; overflow: hidden; white-space: nowrap; }
-                .receipt-row { display: grid; grid-template-columns: 34% minmax(0, 1fr); gap: 4px; }
+                    .receipt-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px; }
                 .receipt-row-value { text-align: right; overflow-wrap: anywhere; }
-                .receipt-item-heading, .receipt-item-values {
-                    display: grid;
-                    grid-template-columns: minmax(0, 1fr) auto auto auto;
-                    gap: 4px;
-                    text-align: right;
-                }
-                .receipt-item-heading span:first-child, .receipt-item-values span:first-child { text-align: left; }
-                .receipt-item-heading { font-weight: 700; }
-                .receipt-qty-label { margin-bottom: 5px; }
-                .receipt-item { margin-bottom: 7px; }
-                .receipt-product-name { margin-bottom: 2px; }
-                .receipt-item-values { font-size: 9px; }
+                    .receipt-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; }
+                    .receipt-meta .receipt-row { grid-template-columns: auto minmax(0, 1fr); gap: 3px; }
+                    .receipt-meta .receipt-row-value { text-align: left; }
+                    .receipt-item-heading, .receipt-item-row, .receipt-item-description {
+                         display: grid;
+                         grid-template-columns: 3ch minmax(4ch, 1fr) 4ch 7ch 8ch;
+                         column-gap: 2px;
+                         align-items: start;
+                    }
+                    .receipt-item-heading { font-weight: 700; font-size: 8px; }
+                    .receipt-item-heading span:not(:nth-child(2)), .receipt-item-row > span:not(:nth-child(2)) { text-align: right; }
+                    .receipt-item { margin: 3px 0 7px; }
+                    .receipt-product-name { text-align: left; overflow-wrap: anywhere; }
+                    .receipt-item-row > span:nth-child(n + 4) { white-space: nowrap; font-size: 8px; }
+                    .receipt-item-description span { grid-column: 2; }
                 .receipt-totals .receipt-row { grid-template-columns: minmax(0, 1fr) auto; }
                 .receipt-totals .receipt-row-value { white-space: nowrap; }
                 .receipt-totals .receipt-row-strong { font-weight: 700; }
-                .receipt-footer { margin-top: 6px; }
+                    .receipt-customer { margin-top: 8px; }
+                    .receipt-customer > strong { display: block; margin-bottom: 4px; }
+                    .receipt-customer .receipt-row { text-align: left; }
+                    .receipt-notice { margin-top: 8px; }
+                    .receipt-closing { margin-top: 4px; }
                 @media print {
                     @page { size: auto; margin: 2mm; }
                     html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
