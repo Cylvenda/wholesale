@@ -307,7 +307,6 @@ export type ReceiptItem = {
     quantity: number
     unit: string
     unit_price: string
-    discount: string
     line_total: string
 }
 

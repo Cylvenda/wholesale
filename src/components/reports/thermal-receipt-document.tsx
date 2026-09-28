@@ -68,17 +68,17 @@ export function ThermalReceiptDocument({
                     </section>
 
                     <div className="receipt-rule">------------------------------------------------</div>
-                    <section className="receipt-meta">
-                         <ReceiptRow label="Bill No" value={document.receipt_number} />
-                         <ReceiptRow label="Tel No" value={receipt.business.phone || "N/A"} />
-                         <ReceiptRow label="Bill By" value={staffName || "N/A"} />
-                         <ReceiptRow label="Date" value={receiptDate.toLocaleDateString("en-GB")} />
-                         <ReceiptRow label="VAT Reg" value={receipt.business.tax_number || "N/A"} />
-                         <ReceiptRow label="Tax" value="N/A" />
-                         <ReceiptRow label="Counter" value="N/A" />
-                         <ReceiptRow label="Time" value={receiptDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })} />
+                    <section className="receipt-meta-grid">
+                         <ReceiptMeta label="Bill No" value={document.receipt_number} />
+                         <ReceiptMeta label="Tel No" value={receipt.business.phone || "N/A"} />
+                         <ReceiptMeta label="Bill By" value={staffName || "N/A"} />
+                         <ReceiptMeta label="Date" value={receiptDate.toLocaleDateString("en-GB")} />
+                         <ReceiptMeta label="VAT Reg" value={receipt.business.tax_number || "N/A"} />
+                         <ReceiptMeta label="Tax" value="N/A" />
+                         <ReceiptMeta label="Counter" value="N/A" />
+                         <ReceiptMeta label="Time" value={receiptDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })} />
                          {!isSale && receipt.purchase.supplier_invoice_number && (
-                              <ReceiptRow label="Supplier Inv" value={receipt.purchase.supplier_invoice_number} />
+                              <ReceiptMeta label="Supplier Inv" value={receipt.purchase.supplier_invoice_number} />
                          )}
                     </section>
                     <div className="receipt-rule">------------------------------------------------</div>
@@ -109,13 +109,13 @@ export function ThermalReceiptDocument({
 
                     <div className="receipt-rule">------------------------------------------------</div>
                     <section className="receipt-totals">
+                         {isSale && (
+                              <ReceiptRow label="Discount (Bill)" value={formatMoney(receipt.totals.discount, receipt.currency)} />
+                         )}
                          <ReceiptRow label="Total" value={formatMoney(receipt.totals.grand_total, receipt.currency)} strong />
                          <ReceiptRow label="Cash" value={cashAmount === null ? "N/A" : formatMoney(cashAmount, receipt.currency)} />
                          <ReceiptRow label="Change" value="N/A" />
                          <ReceiptRow label="Total Items" value={String(totalItems)} />
-                         {isSale && Number(receipt.totals.discount) > 0 && (
-                              <ReceiptRow label="Discount" value={formatMoney(receipt.totals.discount, receipt.currency)} />
-                         )}
                          {isSale && Number(receipt.totals.outstanding_balance) > 0 && (
                               <ReceiptRow label="Balance" value={formatMoney(receipt.totals.outstanding_balance, receipt.currency)} />
                          )}
@@ -136,8 +136,10 @@ export function ThermalReceiptDocument({
                          <strong>Taarifa Za Mteja</strong>
                          <ReceiptRow label={isSale ? "JINA LA MTEJA" : "JINA LA MSAMBAZAJI"} value={partyName} />
                          <ReceiptRow label="Status" value={status} />
+                         <div className="receipt-rule">------------------------------------------------</div>
                          <div className="receipt-notice">Hii Sio Stakabadhi Halali Ya Tra</div>
-                         <div className="receipt-closing">****Issue Note From S I C****</div>
+
+                         <div className="receipt-rule">------------------------------------------------</div>
                     </footer>
                </article>
 
@@ -166,20 +168,20 @@ export function ThermalReceiptDocument({
                 .receipt-rule { height: 14px; overflow: hidden; white-space: nowrap; }
                     .receipt-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px; }
                 .receipt-row-value { text-align: right; overflow-wrap: anywhere; }
-                    .receipt-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; }
-                    .receipt-meta .receipt-row { grid-template-columns: auto minmax(0, 1fr); gap: 3px; }
-                    .receipt-meta .receipt-row-value { text-align: left; }
+                    .receipt-meta-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px 12px; }
+                    .receipt-meta-value { min-width: 0; text-align: right; overflow-wrap: anywhere; word-break: break-word; }
+                    .receipt-items { font-size: 7px; }
                     .receipt-item-heading, .receipt-item-row, .receipt-item-description {
                          display: grid;
-                         grid-template-columns: 3ch minmax(4ch, 1fr) 4ch 7ch 8ch;
+                         grid-template-columns: 2ch minmax(0, 1fr) 4ch 14ch 14ch;
                          column-gap: 2px;
                          align-items: start;
                     }
-                    .receipt-item-heading { font-weight: 700; font-size: 8px; }
+                    .receipt-item-heading { font-weight: 700; }
                     .receipt-item-heading span:not(:nth-child(2)), .receipt-item-row > span:not(:nth-child(2)) { text-align: right; }
-                    .receipt-item { margin: 3px 0 7px; }
+                    .receipt-item { margin: 1px 0 2px; }
                     .receipt-product-name { text-align: left; overflow-wrap: anywhere; }
-                    .receipt-item-row > span:nth-child(n + 4) { white-space: nowrap; font-size: 8px; }
+                    .receipt-item-row > span:nth-child(n + 4) { white-space: nowrap; }
                     .receipt-item-description span { grid-column: 2; }
                 .receipt-totals .receipt-row { grid-template-columns: minmax(0, 1fr) auto; }
                 .receipt-totals .receipt-row-value { white-space: nowrap; }
@@ -196,7 +198,7 @@ export function ThermalReceiptDocument({
                     aside, nav, .no-print, .pwa-install-prompt, .pwa-update-banner { display: none !important; }
                     main { display: block !important; width: 100% !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; background: #fff !important; }
                     .thermal-receipt { width: 100% !important; max-width: 80mm !important; margin: 0 !important; padding: 0 !important; page-break-inside: avoid; }
-                    .receipt-item, .receipt-meta, .receipt-totals { break-inside: avoid; }
+                    .receipt-item, .receipt-meta-grid, .receipt-totals { break-inside: avoid; }
                 }
             `}</style>
           </>
@@ -216,6 +218,15 @@ function ReceiptRow({
           <div className={`receipt-row${strong ? " receipt-row-strong" : ""}`}>
                <span>{label}</span>
                <span className="receipt-row-value">{value}</span>
+          </div>
+     )
+}
+
+function ReceiptMeta({ label, value }: { label: string; value: string }) {
+     return (
+          <div className="receipt-meta-cell">
+               <span>{label}:</span>
+               <span className="receipt-meta-value">{value}</span>
           </div>
      )
 }
