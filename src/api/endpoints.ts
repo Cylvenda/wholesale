@@ -1,5 +1,4 @@
-const apiRootFromEnv = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:8000/api/"
-
+const apiRootFromEnv = process.env.NEXT_PUBLIC_API_BASE || "https://stock.cylvenda.co.tz/api/"
 
 export const API_ENDPOINTS = {
       // root api endpoint
