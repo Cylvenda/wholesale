@@ -1,10 +1,12 @@
 import api from "@/api/axios"
+import { fetchAll } from "@/api/list"
 
 export type Product = {
     uuid: string;
     name: string;
     brand: string;
     brand_name: string;
+    category_name: string;
     unit: string;
     unit_name?: string;
     buying_price: string;
@@ -24,8 +26,7 @@ export type ProductPayload = {
 
 export const productService = {
     async list() {
-        const response = await api.get<{ results: Product[] }>("products/");
-        return response.data.results ?? []
+        return fetchAll<Product>("products/")
     },
     async get(uuid: string) {
         const response = await api.get<Product>(`products/${uuid}/`)

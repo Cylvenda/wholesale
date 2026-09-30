@@ -38,7 +38,7 @@ function toRows(payments: Payment[]): InventoryRow[] {
         primary: payment.customer_name || "Customer unavailable",
         secondary:
             payment.reference ||
-            `#${payment.uuid.slice(0, 8).toUpperCase()}`,
+            payment.reference_code,
         values: [
             formatCurrency(payment.amount),
             payment.method.replaceAll("_", " "),
@@ -152,20 +152,20 @@ export default function PaymentsPage() {
                 rows={toRows(payments)}
                 loadRows={loadRows}
                 refreshKey={refreshKey}
-                 onAction={() => {
-                     setEditingPayment(null)
-                     setFormOpen(true)
-                 }}
-                 onView={handleView}
-                 onEdit={handleEdit}
-                 onDelete={handleDelete}
-             />
+                onAction={() => {
+                    setEditingPayment(null)
+                    setFormOpen(true)
+                }}
+                onView={handleView}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+            />
 
             {viewingPayment && (
                 <ViewDialog
                     open={Boolean(viewingPayment)}
                     onOpenChange={() => setViewingPayment(null)}
-                    title={`#${viewingPayment.uuid.slice(0, 8).toUpperCase()}`}
+                    title={viewingPayment.reference || viewingPayment.reference_code}
                     description={viewingPayment.customer_name || undefined}
                     status="paid"
                     icon={<CreditCard className="size-5" />}

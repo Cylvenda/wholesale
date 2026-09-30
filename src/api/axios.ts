@@ -34,7 +34,7 @@ api.interceptors.response.use(
                     }
 
                     if (typeof window !== "undefined") {
-                         window.location.replace("/login?reason=session-expired")
+                         window.location.replace("/login")
                     }
 
                     return Promise.reject(refreshError)

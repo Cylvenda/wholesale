@@ -1,4 +1,5 @@
 import api from "@/api/axios"
+import { fetchAll } from "@/api/list"
 
 export type ApiListResponse<T> = {
     count?: number
@@ -105,6 +106,7 @@ export type Stock = {
     uuid: string
     product: string
     product_name: string
+    unit_name: string
     quantity: number
     buying_price: string
     selling_price: string
@@ -118,6 +120,7 @@ export type StockMovement = {
     reference: string
     notes: string
     product_name: string
+    unit_name: string
     created_at: string
 }
 
@@ -171,6 +174,7 @@ export type PurchaseItemPayload = {
 
 export type Purchase = {
     uuid: string
+    reference_code: string
     supplier: string
     supplier_name: string
     invoice_number: string
@@ -207,6 +211,7 @@ export type SaleItemPayload = {
 
 export type Sale = {
     uuid: string
+    reference_code: string
     customer: string
     customer_name: string
     status: "draft" | "completed" | "cancelled"
@@ -232,6 +237,7 @@ export type SalePayload = {
 
 export type Payment = {
     uuid: string
+    reference_code: string
     customer: string
     customer_name: string
     sale: string | null
@@ -418,10 +424,7 @@ async function download(endpoint: string, fallbackFilename: string): Promise<Rep
 /* ------------------------------------------------------------------ */
 
 async function list<T>(endpoint: string): Promise<T[]> {
-    const response = await api.get<ApiListResponse<T> | T[]>(endpoint)
-    return Array.isArray(response.data)
-        ? response.data
-        : response.data.results ?? []
+    return fetchAll<T>(endpoint)
 }
 
 async function get<T>(endpoint: string): Promise<T> {

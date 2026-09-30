@@ -34,6 +34,7 @@ function toRows(stocks: Stock[]): InventoryRow[] {
             primary: stock.product_name,
             values: [
                 String(quantity),
+                stock.unit_name,
                 formatCurrency(stock.buying_price),
                 formatCurrency(stockValue),
                 formatDate(stock.updated_at),
@@ -98,7 +99,7 @@ export default function StockPage() {
                 title="Stock"
                 description="Track available quantities and movement across your warehouse."
                 action="Record movement"
-                columns={["Product", "Current", "Unit cost", "Stock value", "Last movement", "Status"]}
+                columns={["Product", "Current", "Unit", "Unit cost", "Stock value", "Last movement", "Status"]}
                 rows={toRows(stocks)}
                 summary={summary}
                 loadRows={loadRows}

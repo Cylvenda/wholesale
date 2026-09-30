@@ -47,7 +47,7 @@ function toRows(
         primary: supplierNames.get(purchase.supplier) ?? "Supplier unavailable",
         secondary: purchase.invoice_number
             ? purchase.invoice_number
-            : `#${purchase.uuid.slice(0, 8).toUpperCase()}`,
+            : purchase.reference_code,
         values: [
             String(purchase.items.length),
             formatCurrency(purchase.total),
@@ -185,7 +185,7 @@ export default function PurchasesPage() {
             />
 
             <Dialog open={formOpen} onOpenChange={setFormOpen}>
-                <DialogContent className="max-h-[95vh] w-[min(96vw,1440px)] max-w-none flex flex-col overflow-hidden">
+                <DialogContent className="max-h-[95vh] w-[min(94vw,1024px)] max-w-none sm:max-w-5xl! flex flex-col overflow-hidden">
                     <DialogHeader>
                         <DialogTitle>
                             {editingPurchase ? "Edit purchase" : "Create purchase"}
@@ -211,7 +211,7 @@ export default function PurchasesPage() {
                     onOpenChange={() => setViewingPurchase(null)}
                     title={
                         viewingPurchase.invoice_number ||
-                        `#${viewingPurchase.uuid.slice(0, 8).toUpperCase()}`
+                        viewingPurchase.reference_code
                     }
                     description={viewingPurchase.supplier_name || undefined}
                     status={toPurchaseStatus(viewingPurchase.status)}
@@ -268,7 +268,7 @@ export default function PurchasesPage() {
                         <AlertDialogDescription>
                             This will reverse the stock for purchase{" "}
                             {cancelTarget?.invoice_number ||
-                                `#${cancelTarget?.uuid.slice(0, 8).toUpperCase()}`}
+                                cancelTarget?.reference_code}
                             . This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>

@@ -1,6 +1,7 @@
 import type { AccountActivation, UserMeResponse } from "@/store/auth/auth.types"
 import api from "../axios"
 import { API_ENDPOINTS } from "../endpoints"
+import { fetchAll } from "../list"
 
 export type UserRole = "admin" | "manager" | "salesperson" | "storekeeper" | "accountant"
 
@@ -64,10 +65,7 @@ export const userServices = {
      },
 
      async listUsers(): Promise<UserAdminResponse[]> {
-          const response = await api.get(API_ENDPOINTS.USER_MANAGEMENT)
-          return Array.isArray(response.data)
-              ? response.data
-              : response.data.results ?? []
+          return fetchAll<UserAdminResponse>(API_ENDPOINTS.USER_MANAGEMENT)
      },
 
      async getUser(uuid: string): Promise<UserAdminResponse> {

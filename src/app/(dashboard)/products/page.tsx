@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Eye, MoreHorizontal, Package, Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Eye, MoreHorizontal, Package, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { toast } from "react-toastify"
 import { productService, type Product } from "@/api/services/product.service"
 import { ProductForm } from "@/components/products/product-form"
@@ -37,6 +37,13 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { PageHeader } from "@/components/shared/page-header"
 import { ErrorState, EmptyState, TableSkeleton } from "@/components/shared/table-states"
 import { StatusBadge } from "@/components/shared/status-badge"
@@ -56,6 +63,8 @@ export default function ProductsPage() {
     const [loading, setLoading] = useState(true)
     const [failed, setFailed] = useState(false)
     const [search, setSearch] = useState("")
+    const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
     const [formOpen, setFormOpen] = useState(false)
     const [editingProduct, setEditingProduct] = useState<Product | null>(null)
     const [deletingProduct, setDeletingProduct] = useState<Product | null>(null)
@@ -124,10 +133,15 @@ export default function ProductsPage() {
     }
 
     const filtered = products.filter((product) =>
-        `${product.name} ${product.brand_name} ${product.unit}`.toLowerCase().includes(
+        `${product.name} ${product.brand_name} ${product.category_name} ${product.unit}`.toLowerCase().includes(
             search.toLowerCase()
         )
     )
+    const totalRows = filtered.length
+    const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
+    const visiblePage = Math.min(currentPage, totalPages)
+    const startIndex = (visiblePage - 1) * pageSize
+    const paginatedProducts = filtered.slice(startIndex, startIndex + pageSize)
 
     return (
         <main className="min-h-full bg-muted/30">
@@ -157,7 +171,10 @@ export default function ProductsPage() {
                             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-blue-600" />
                             <Input
                                 value={search}
-                                onChange={(event) => setSearch(event.target.value)}
+                                onChange={(event) => {
+                                    setSearch(event.target.value)
+                                    setCurrentPage(1)
+                                }}
                                 placeholder="Search products"
                                 className="pl-9"
                             />
@@ -179,6 +196,7 @@ export default function ProductsPage() {
                                         <TableHead className="pl-2">
                                             Product
                                         </TableHead>
+                                        <TableHead>Category</TableHead>
                                         <TableHead>Brand</TableHead>
                                         <TableHead>Unit</TableHead>
                                         <TableHead>Purchase price</TableHead>
@@ -191,13 +209,16 @@ export default function ProductsPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {filtered.length ? (
-                                        filtered.map((product, index) => (
+                                        paginatedProducts.map((product, index) => (
                                             <TableRow key={product.uuid}>
                                                 <TableCell className="text-center text-sm text-muted-foreground">
-                                                    {index + 1}
+                                                    {startIndex + index + 1}
                                                 </TableCell>
                                                 <TableCell className="pl-2 font-medium">
                                                     {product.name}
+                                                </TableCell>
+                                                <TableCell className="text-muted-foreground">
+                                                    {product.category_name || "—"}
                                                 </TableCell>
                                                 <TableCell className="text-muted-foreground">
                                                     {product.brand_name || "—"}
@@ -266,7 +287,7 @@ export default function ProductsPage() {
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="p-0">
+                                            <TableCell colSpan={9} className="p-0">
                                                 <EmptyState
                                                     title="No products found"
                                                     description={
@@ -282,6 +303,59 @@ export default function ProductsPage() {
                             </Table>
                         )}
                     </CardContent>
+
+                    {!loading && !failed && totalRows > 0 && (
+                        <div className="flex flex-col gap-3 border-t border-border/60 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+                            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                                <span className="whitespace-nowrap">
+                                    Showing {startIndex + 1}-
+                                    {Math.min(startIndex + pageSize, totalRows)} of {totalRows}
+                                </span>
+                                <Select
+                                    value={String(pageSize)}
+                                    onValueChange={(value) => {
+                                        setPageSize(Number(value))
+                                        setCurrentPage(1)
+                                    }}
+                                >
+                                    <SelectTrigger className="h-8 border-border bg-background text-xs">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="5">5 / page</SelectItem>
+                                        <SelectItem value="10">10 / page</SelectItem>
+                                        <SelectItem value="25">25 / page</SelectItem>
+                                        <SelectItem value="50">50 / page</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="flex items-center justify-between gap-2 sm:justify-end">
+                                <Button
+                                    variant="outline"
+                                    size="icon-sm"
+                                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                                    disabled={visiblePage === 1}
+                                    className="h-9 w-9"
+                                    aria-label="Previous page"
+                                >
+                                    <ChevronLeft className="size-4" />
+                                </Button>
+                                <span className="min-w-24 text-center text-sm font-medium text-muted-foreground">
+                                    Page {visiblePage} of {totalPages}
+                                </span>
+                                <Button
+                                    variant="outline"
+                                    size="icon-sm"
+                                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                                    disabled={visiblePage === totalPages}
+                                    className="h-9 w-9"
+                                    aria-label="Next page"
+                                >
+                                    <ChevronRight className="size-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </Card>
 
                 {/* Create / Edit Dialog */}

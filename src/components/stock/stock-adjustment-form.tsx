@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import axios from "axios"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -33,6 +34,28 @@ const MOVEMENT_TYPES = [
     { value: "Stocktake Loss", label: "Stocktake Loss (decrease)" },
 ]
 
+function getErrorMessage(error: unknown): string {
+    if (!axios.isAxiosError(error)) {
+        return error instanceof Error
+            ? error.message
+            : "Unable to record the stock adjustment. Please try again."
+    }
+
+    const collectMessages = (value: unknown): string[] => {
+        if (typeof value === "string" && value.trim()) return [value.trim()]
+        if (Array.isArray(value)) return value.flatMap(collectMessages)
+        if (value && typeof value === "object") {
+            return Object.values(value as Record<string, unknown>).flatMap(collectMessages)
+        }
+        return []
+    }
+
+    const messages = collectMessages(error.response?.data)
+    return messages.length
+        ? messages.join(" ")
+        : error.message || "Unable to record the stock adjustment. Please try again."
+}
+
 export function StockAdjustmentForm({
     onCancel,
     onSuccess,
@@ -46,7 +69,6 @@ export function StockAdjustmentForm({
     const [reference, setReference] = useState("")
     const [notes, setNotes] = useState("")
     const [submitting, setSubmitting] = useState(false)
-    const [formError, setFormError] = useState<string | null>(null)
 
     useEffect(() => {
         let active = true
@@ -70,14 +92,14 @@ export function StockAdjustmentForm({
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault()
-        setFormError(null)
 
         if (!product) {
-            setFormError("Please select a product.")
+            toast.error("Please select a product.")
             return
         }
-        if (!quantity || Number(quantity) <= 0) {
-            setFormError("Quantity must be greater than zero.")
+        const parsedQuantity = Number(quantity)
+        if (!Number.isInteger(parsedQuantity) || parsedQuantity <= 0) {
+            toast.error("Enter a whole-number quantity greater than zero.")
             return
         }
 
@@ -86,7 +108,7 @@ export function StockAdjustmentForm({
         const payload: StockAdjustmentPayload = {
             product,
             movement_type: movementType,
-            quantity: Number(quantity),
+            quantity: parsedQuantity,
             reference: reference.trim() || undefined,
             notes: notes.trim() || undefined,
         }
@@ -95,11 +117,8 @@ export function StockAdjustmentForm({
             await inventoryService.createStockMovement(payload)
             toast.success("Stock adjustment recorded successfully.")
             await onSuccess()
-        } catch {
-            setFormError(
-                "Unable to record the stock adjustment. " +
-                    "For decreases, ensure sufficient stock is available."
-            )
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error))
         } finally {
             setSubmitting(false)
         }
@@ -153,6 +172,7 @@ export function StockAdjustmentForm({
                     id="adjustment-quantity"
                     type="number"
                     min="1"
+                    step="1"
                     value={quantity}
                     onChange={(e) => setQuantity(e.target.value)}
                     disabled={submitting}
@@ -182,15 +202,6 @@ export function StockAdjustmentForm({
                     rows={3}
                 />
             </div>
-
-            {formError && (
-                <p
-                    role="alert"
-                    className="text-sm font-medium text-destructive"
-                >
-                    {formError}
-                </p>
-            )}
 
             <DialogFooter>
                 <Button

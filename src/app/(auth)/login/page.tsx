@@ -14,8 +14,35 @@ import { Spinner } from "@/components/ui/spinner";
 import { CheckCircle2 } from "lucide-react";
 import { Suspense } from "react";
 import { authUserService } from "@/api/services/auth.service";
+import axios from "axios";
 
 type LoginFormValues = z.infer<typeof LoginFormSchema>;
+
+function getLoginErrorMessage(error: unknown): string {
+  if (!axios.isAxiosError(error)) return "Login failed. Please try again.";
+
+  const responseData: unknown = error.response?.data;
+  if (typeof responseData === "string" && responseData.trim()) return responseData;
+  if (!responseData || typeof responseData !== "object") {
+    return "Login failed. Please try again.";
+  }
+
+  const data = responseData as Record<string, unknown>;
+  for (const key of ["detail", "non_field_errors", "message"]) {
+    const value = data[key];
+    if (typeof value === "string" && value.trim()) return value;
+    if (Array.isArray(value) && value.length > 0) return value.join(" ");
+  }
+
+  const fieldErrors = Object.entries(data)
+    .filter(([, value]) => Array.isArray(value) || typeof value === "string")
+    .map(([field, value]) => {
+      const message = Array.isArray(value) ? value.join(" ") : value;
+      return `${field}: ${message}`;
+    });
+
+  return fieldErrors[0] ?? "Login failed. Please try again.";
+}
 
 function LoginForm() {
   const router = useRouter();
@@ -56,8 +83,8 @@ function LoginForm() {
 
         router.replace("/dashboard");
       }
-    } catch {
-      toast.error("Login failed. Check credentials.");
+    } catch (error: unknown) {
+      toast.error(getLoginErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -93,28 +120,28 @@ function LoginForm() {
             placeholder={"Enter your email"}
           />
 
-            {/* PASSWORD */}
-            <PasswordInput
-              control={form.control}
-              name="password"
-              label={"Password"}
-              placeholder={"Enter your password"}
-              forgetPassword={{
-                text: "Forgot password?",
-                location: "/reset",
-              }}
-            />
+          {/* PASSWORD */}
+          <PasswordInput
+            control={form.control}
+            name="password"
+            label={"Password"}
+            placeholder={"Enter your password"}
+            forgetPassword={{
+              text: "Forgot password?",
+              location: "/reset",
+            }}
+          />
 
-            {/* SUBMIT BUTTON */}
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full py-6 bg-chart-3 text-primary-foreground font-bold hover:bg-chart-2 rounded-xl transition-all duration-300 shadow-md hover:shadow-chart-3/20"
-            >
-              {loading ? <Spinner /> : "Sign In"}
-            </Button>
+          {/* SUBMIT BUTTON */}
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full py-6 bg-chart-3 text-primary-foreground font-bold hover:bg-chart-2 rounded-xl transition-all duration-300 shadow-md hover:shadow-chart-3/20"
+          >
+            {loading ? <Spinner /> : "Sign In"}
+          </Button>
 
-            </form>
+        </form>
       </FormInput>
     </div>
   );

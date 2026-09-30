@@ -54,7 +54,7 @@ export function Header({
 
                 <div className="flex items-center gap-2">
                     <span className="text-xl font-extrabold tracking-tight text-foreground">
-                        CYL<span className="text-foreground">Stock</span>
+                        IMARA SHOP
                     </span>
                 </div>
 

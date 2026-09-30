@@ -36,6 +36,7 @@ function toRows(movements: StockMovement[]): InventoryRow[] {
         values: [
             movement.movement_type,
             String(movement.quantity),
+            movement.unit_name,
             formatDate(movement.created_at),
         ],
         status: toMovementStatus(movement.movement_type),
@@ -70,7 +71,7 @@ export default function StockMovementsPage() {
                 title="Stock movements"
                 description="A complete record of stock entering and leaving the warehouse."
                 action="Add adjustment"
-                 columns={["Product", "Type", "Quantity", "Created", "Status"]}
+                columns={["Product", "Type", "Quantity", "Unit", "Created", "Status"]}
                 rows={toRows(movements)}
                 loadRows={loadRows}
                 refreshKey={refreshKey}
@@ -109,6 +110,7 @@ export default function StockMovementsPage() {
                         { label: "Reference", value: viewingMovement.reference || "—" },
                         { label: "Type", value: viewingMovement.movement_type },
                         { label: "Quantity", value: String(viewingMovement.quantity) },
+                        { label: "Unit", value: viewingMovement.unit_name },
                         { label: "Created", value: formatDate(viewingMovement.created_at) },
                     ]}
                     sections={[

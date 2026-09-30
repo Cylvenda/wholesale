@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import axios from "axios"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -31,6 +32,36 @@ const USER_ROLES = [
     { value: "accountant", label: "Accountant" },
 ] as const
 
+const passwordRequirements = [
+    { label: "8 to 20 characters", test: (value: string) => value.length >= 8 && value.length <= 20 },
+    { label: "One lowercase letter", test: (value: string) => /[a-z]/.test(value) },
+    { label: "One uppercase letter", test: (value: string) => /[A-Z]/.test(value) },
+    { label: "One number", test: (value: string) => /[0-9]/.test(value) },
+    { label: "One special character", test: (value: string) => /[^a-zA-Z0-9]/.test(value) },
+]
+
+function getBackendError(error: unknown): string {
+    if (!axios.isAxiosError(error)) {
+        return error instanceof Error
+            ? error.message
+            : "Unable to save the user. Please try again."
+    }
+
+    const collectMessages = (value: unknown): string[] => {
+        if (typeof value === "string" && value.trim()) return [value.trim()]
+        if (Array.isArray(value)) return value.flatMap(collectMessages)
+        if (value && typeof value === "object") {
+            return Object.values(value as Record<string, unknown>).flatMap(collectMessages)
+        }
+        return []
+    }
+
+    const messages = collectMessages(error.response?.data)
+    return messages.length
+        ? messages.join(" ")
+        : error.message || "Unable to save the user. Please try again."
+}
+
 export function UserForm({ mode, user, onCancel, onSubmit }: UserFormProps) {
     const [firstName, setFirstName] = useState(user?.first_name ?? "")
     const [lastName, setLastName] = useState(user?.last_name ?? "")
@@ -40,22 +71,20 @@ export function UserForm({ mode, user, onCancel, onSubmit }: UserFormProps) {
     const [isActive, setIsActive] = useState(user?.is_active ?? true)
     const [password, setPassword] = useState("")
     const [submitting, setSubmitting] = useState(false)
-    const [formError, setFormError] = useState<string | null>(null)
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault()
-        setFormError(null)
 
         if (!email.trim()) {
-            setFormError("Email address is required.")
+            toast.error("Email address is required.")
             return
         }
         if (!phone.trim()) {
-            setFormError("Phone number is required.")
+            toast.error("Phone number is required.")
             return
         }
-        if (mode === "create" && !password) {
-            setFormError("Password is required when creating a new user.")
+        if (mode === "create" && passwordRequirements.some(({ test }) => !test(password))) {
+            toast.error("Please meet all password requirements.")
             return
         }
 
@@ -80,10 +109,8 @@ export function UserForm({ mode, user, onCancel, onSubmit }: UserFormProps) {
                 toast.success("User created successfully.")
             }
             await onSubmit()
-        } catch {
-            setFormError(
-                "Unable to save the user. Please review the details and try again."
-            )
+        } catch (error: unknown) {
+            toast.error(getBackendError(error))
         } finally {
             setSubmitting(false)
         }
@@ -155,19 +182,32 @@ export function UserForm({ mode, user, onCancel, onSubmit }: UserFormProps) {
                     </Select>
                 </div>
 
-                <div className="space-y-2">
-                    <Label htmlFor="user-password">
-                        {mode === "create" ? "Password" : "Password (leave blank to keep)"}
-                    </Label>
-                    <Input
-                        id="user-password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        disabled={submitting}
-                        placeholder={mode === "create" ? "Set initial password" : "New password"}
-                    />
-                </div>
+                {mode === "create" && (
+                    <div className="space-y-2">
+                        <Label htmlFor="user-password">Password</Label>
+                        <Input
+                            id="user-password"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            disabled={submitting}
+                            placeholder="Set initial password"
+                            autoComplete="new-password"
+                            required
+                            maxLength={20}
+                        />
+                        <ul className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+                            {passwordRequirements.map(({ label, test }) => (
+                                <li
+                                    key={label}
+                                    className={password && test(password) ? "text-emerald-700" : undefined}
+                                >
+                                    {password && test(password) ? "✓" : "•"} {label}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
             </div>
 
             <div className="flex items-center justify-between">
@@ -181,15 +221,6 @@ export function UserForm({ mode, user, onCancel, onSubmit }: UserFormProps) {
                     disabled={submitting}
                 />
             </div>
-
-            {formError && (
-                <p
-                    role="alert"
-                    className="text-sm font-medium text-destructive"
-                >
-                    {formError}
-                </p>
-            )}
 
             <DialogFooter>
                 <Button
@@ -206,8 +237,8 @@ export function UserForm({ mode, user, onCancel, onSubmit }: UserFormProps) {
                             ? "Saving…"
                             : "Creating…"
                         : mode === "edit"
-                          ? "Save changes"
-                          : "Create user"}
+                            ? "Save changes"
+                            : "Create user"}
                 </Button>
             </DialogFooter>
         </form>

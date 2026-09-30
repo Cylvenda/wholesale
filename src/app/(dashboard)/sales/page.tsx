@@ -40,7 +40,7 @@ function toRows(sales: Sale[]): InventoryRow[] {
     return sales.map((sale) => ({
         id: sale.uuid,
         primary: sale.customer_name || "Customer unavailable",
-        secondary: `#${sale.uuid.slice(0, 8).toUpperCase()}`,
+        secondary: sale.reference_code,
         values: [
             String(sale.items.length),
             formatCurrency(sale.total),
@@ -166,7 +166,7 @@ export default function SalesPage() {
             />
 
             <Dialog open={formOpen} onOpenChange={setFormOpen}>
-                <DialogContent className="max-h-[95vh] w-[min(96vw,1440px)] max-w-none flex flex-col overflow-hidden">
+                <DialogContent className="max-h-[95vh] w-[min(94vw,1024px)] max-w-none sm:max-w-5xl! flex flex-col overflow-hidden">
                     <DialogHeader>
                         <DialogTitle>
                             {editingSale ? "Edit sale" : "Record sale"}
@@ -190,7 +190,7 @@ export default function SalesPage() {
                 <ViewDialog
                     open={Boolean(viewingSale)}
                     onOpenChange={() => setViewingSale(null)}
-                    title={`#${viewingSale.uuid.slice(0, 8).toUpperCase()}`}
+                    title={viewingSale.reference_code}
                     description={viewingSale.customer_name || undefined}
                     status={toPaymentStatus(viewingSale.payment_status)}
                     icon={<Receipt className="size-5" />}
@@ -246,7 +246,7 @@ export default function SalesPage() {
                         </AlertDialogTitle>
                         <AlertDialogDescription>
                             This will reverse the stock for sale{" "}
-                            #{cancelTarget?.uuid.slice(0, 8).toUpperCase()}
+                            {cancelTarget?.reference_code}
                             . This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
