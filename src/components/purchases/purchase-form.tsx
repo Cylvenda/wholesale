@@ -50,6 +50,65 @@ type LineItem = {
     unit_cost: string
 }
 
+/**
+ * One height for every control in an item row. The base Input and SelectTrigger
+ * default to `h-8`, which is too shallow next to a `type="number"` spinner, so
+ * each row control is pinned to the same 40px box.
+ */
+const ROW_CONTROL = "h-10 w-full"
+
+type ItemFieldProps = {
+    label: string
+    htmlFor?: string
+    className?: string
+    /** Read-only cell content, for columns like Conversion and Subtotal. */
+    value?: string
+    helper?: string
+    tone?: "muted" | "error"
+    children?: React.ReactNode
+}
+
+/**
+ * A single cell of a purchase item row.
+ *
+ * The label sits above the control and the helper line is reserved at a fixed
+ * height below it, so a field that has helper text never pushes its control out
+ * of line with the controls beside it.
+ */
+function ItemField({
+    label,
+    htmlFor,
+    className,
+    value,
+    helper,
+    tone = "muted",
+    children,
+}: ItemFieldProps) {
+    return (
+        <div className={`flex min-w-0 flex-col ${className ?? ""}`}>
+            <Label
+                htmlFor={htmlFor}
+                className="mb-1 text-xs font-medium text-muted-foreground"
+            >
+                {label}
+            </Label>
+            {children ?? (
+                <span className="flex h-10 items-center truncate text-sm font-medium">
+                    {value}
+                </span>
+            )}
+            <span
+                aria-hidden={!helper}
+                className={`mt-1 line-clamp-1 min-h-4 text-xs leading-4 ${
+                    tone === "error" ? "text-destructive" : "text-muted-foreground"
+                }`}
+            >
+                {helper ?? "\u00a0"}
+            </span>
+        </div>
+    )
+}
+
 export function PurchaseForm({
     mode,
     purchase,
@@ -396,203 +455,153 @@ export function PurchaseForm({
                             return (
                                 <div
                                     key={index}
-                                    className="grid grid-cols-1 items-start gap-3 rounded-md border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-12"
+                                    className="grid grid-cols-1 gap-x-3 gap-y-2 rounded-md border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-12"
                                 >
-                                    <div className="space-y-1 sm:col-span-2 lg:col-span-3">
-                                        <Label className="text-xs text-muted-foreground">
-                                            Product
-                                        </Label>
+                                    <ItemField
+                                        label="Product"
+                                        className="sm:col-span-2 lg:col-span-3"
+                                        helper={baseLabel ? `Priced per ${baseLabel}` : "Select a product"}
+                                    >
                                         <Select
                                             value={item.product}
-                                            onValueChange={(v) =>
-                                                handleProductChange(index, v)
-                                            }
+                                            onValueChange={(v) => handleProductChange(index, v)}
                                             disabled={submitting}
                                         >
-                                            <SelectTrigger className="w-full">
+                                            <SelectTrigger className={ROW_CONTROL}>
                                                 <SelectValue placeholder="Select a product" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {products
                                                     .filter(
                                                         (p) =>
-                                                            p.uuid ===
-                                                                item.product ||
-                                                            !selectedProductUuids.has(
-                                                                p.uuid
-                                                            )
+                                                            p.uuid === item.product ||
+                                                            !selectedProductUuids.has(p.uuid)
                                                     )
                                                     .map((p) => (
-                                                        <SelectItem
-                                                            key={p.uuid}
-                                                            value={p.uuid}
-                                                        >
+                                                        <SelectItem key={p.uuid} value={p.uuid}>
                                                             {p.name}
                                                         </SelectItem>
                                                     ))}
                                             </SelectContent>
                                         </Select>
-                                        <p className="text-xs text-muted-foreground">
-                                            {baseLabel
-                                                ? `Priced per ${baseLabel}`
-                                                : "Select a product"}
-                                        </p>
-                                    </div>
+                                    </ItemField>
 
-                                    <div className="space-y-1 lg:col-span-2">
-                                        <Label className="text-xs text-muted-foreground">
-                                            Purchase Unit
-                                        </Label>
+                                    <ItemField
+                                        label="Purchase Unit"
+                                        className="lg:col-span-2"
+                                        helper={
+                                            selectedUnit
+                                                ? formatUnitConversion(selectedUnit, baseLabel)
+                                                : item.product
+                                                  ? "Select unit"
+                                                  : "Choose a product to load its units"
+                                        }
+                                    >
                                         <Select
                                             value={item.product_unit}
-                                            onValueChange={(value) =>
-                                                handleProductUnitChange(index, value)
-                                            }
+                                            onValueChange={(value) => handleProductUnitChange(index, value)}
                                             disabled={submitting || !item.product}
                                         >
-                                            <SelectTrigger className="w-full min-w-44">
+                                            <SelectTrigger className={ROW_CONTROL}>
                                                 <SelectValue
                                                     placeholder={
-                                                        item.product
-                                                            ? "Select unit"
-                                                            : "Select product first"
+                                                        item.product ? "Select unit" : "Select product first"
                                                     }
                                                 />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {productUnits.map((pu) => (
-                                                    <SelectItem
-                                                        key={pu.uuid}
-                                                        value={pu.uuid}
-                                                    >
+                                                    <SelectItem key={pu.uuid} value={pu.uuid}>
                                                         {pu.unit_name}
-                                                        {pu.unit_abbreviation
-                                                            ? ` (${pu.unit_abbreviation})`
-                                                            : ""}
+                                                        {pu.unit_abbreviation ? ` (${pu.unit_abbreviation})` : ""}
                                                         {` · ${pu.conversion_factor} ${baseLabel}`}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
-                                        <p className="text-xs text-muted-foreground">
-                                            {selectedUnit
-                                                ? formatUnitConversion(
-                                                      selectedUnit,
-                                                      baseLabel
-                                                  )
-                                                : item.product
-                                                  ? "Select unit"
-                                                  : "Choose a product to load its units"}
-                                        </p>
-                                    </div>
+                                    </ItemField>
 
-                                    <div className="space-y-1 lg:col-span-1">
-                                        <Label
-                                            className="text-xs text-muted-foreground"
-                                            htmlFor={`purchase-quantity-${index}`}
-                                        >
-                                            Quantity
-                                        </Label>
+                                    <ItemField
+                                        label="Quantity"
+                                        className="lg:col-span-1"
+                                        htmlFor={`purchase-quantity-${index}`}
+                                        tone={invalidQuantity ? "error" : "muted"}
+                                        helper={
+                                            invalidQuantity
+                                                ? "Whole numbers only"
+                                                : selectedUnit
+                                                  ? `of ${unitLabel}`
+                                                  : "Select a unit first"
+                                        }
+                                    >
                                         <Input
                                             id={`purchase-quantity-${index}`}
                                             type="number"
                                             step={1}
                                             min={1}
                                             value={item.quantity}
-                                            onChange={(e) =>
-                                                updateItem(
-                                                    index,
-                                                    "quantity",
-                                                    e.target.value
-                                                )
-                                            }
+                                            onChange={(e) => updateItem(index, "quantity", e.target.value)}
                                             disabled={submitting}
                                             aria-invalid={invalidQuantity}
-                                            className="w-full min-w-20"
+                                            className={ROW_CONTROL}
                                         />
-                                        <p
-                                            className={`text-xs ${
-                                                invalidQuantity
-                                                    ? "text-destructive"
-                                                    : "text-muted-foreground"
-                                            }`}
-                                        >
-                                            {invalidQuantity
-                                                ? "Whole numbers only"
-                                                : selectedUnit
-                                                  ? `of ${unitLabel}`
-                                                  : "Select a unit first"}
-                                        </p>
-                                    </div>
+                                    </ItemField>
 
-                                    <div className="space-y-1 lg:col-span-2">
-                                        <Label className="text-xs text-muted-foreground">
-                                            Conversion
-                                        </Label>
-                                        <p className="text-sm font-medium leading-6">
-                                            {conversionText ?? "\u2014"}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {baseQuantity !== null
+                                    <ItemField
+                                        label="Conversion"
+                                        className="lg:col-span-2"
+                                        value={conversionText ?? "\u2014"}
+                                        helper={
+                                            baseQuantity !== null
                                                 ? `Adds +${baseQuantity} ${baseLabel} to stock`
-                                                : "Select a unit"}
-                                        </p>
-                                    </div>
+                                                : "Select a unit"
+                                        }
+                                    />
 
-                                    <div className="space-y-1 lg:col-span-2">
-                                        <Label
-                                            className="text-xs text-muted-foreground"
-                                            htmlFor={`purchase-unit-cost-${index}`}
-                                        >
-                                            Unit Cost
-                                        </Label>
+                                    <ItemField
+                                        label="Unit Cost"
+                                        className="lg:col-span-2"
+                                        htmlFor={`purchase-unit-cost-${index}`}
+                                        helper={selectedUnit ? `Per ${unitLabel}` : "Select a unit first"}
+                                    >
                                         <Input
                                             id={`purchase-unit-cost-${index}`}
                                             type="number"
                                             min="0"
                                             step="0.01"
                                             value={item.unit_cost}
-                                            onChange={(e) =>
-                                                updateItem(
-                                                    index,
-                                                    "unit_cost",
-                                                    e.target.value
-                                                )
-                                            }
+                                            onChange={(e) => updateItem(index, "unit_cost", e.target.value)}
                                             disabled={submitting}
-                                            className="w-full min-w-30"
+                                            className={ROW_CONTROL}
                                         />
-                                        <p className="text-xs text-muted-foreground">
-                                            {selectedUnit
-                                                ? `Per ${unitLabel}`
-                                                : "Select a unit first"}
-                                        </p>
-                                    </div>
+                                    </ItemField>
 
-                                    <div className="space-y-1 lg:col-span-1">
-                                        <Label className="text-xs text-muted-foreground">
+                                    <div className="flex flex-col lg:col-span-1">
+                                        <span className="mb-1 text-xs font-medium text-muted-foreground">
                                             Subtotal
-                                        </Label>
-                                        <p className="text-sm font-medium leading-6 text-right lg:text-left">
+                                        </span>
+                                        <span className="flex h-10 items-center text-sm font-semibold tabular-nums">
                                             {formatCurrency(subtotal)}
-                                        </p>
+                                        </span>
+                                        <span aria-hidden className="mt-1 min-h-4" />
                                     </div>
 
-                                    <div className="flex items-start justify-end lg:col-span-1">
+                                    <div className="flex flex-col lg:col-span-1 lg:items-end">
+                                        <span aria-hidden className="mb-1 h-4" />
                                         <Button
                                             type="button"
                                             variant="ghost"
-                                            size="sm"
+                                            size="icon"
                                             onClick={() => removeItem(index)}
-                                            disabled={
-                                                submitting || items.length === 1
-                                            }
+                                            disabled={submitting || items.length === 1}
                                             aria-label={`Remove item ${index + 1}`}
+                                            className="size-10 text-blue-600 hover:text-blue-700"
                                         >
-                                            <Trash2 className="size-4 text-blue-600" />
+                                            <Trash2 className="size-4" />
                                         </Button>
+                                        <span aria-hidden className="mt-1 min-h-4" />
                                     </div>
-                                </div>
+                            </div>
                             )
                         })}
                     </div>
