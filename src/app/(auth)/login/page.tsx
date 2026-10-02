@@ -14,35 +14,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { CheckCircle2 } from "lucide-react";
 import { Suspense } from "react";
 import { authUserService } from "@/api/services/auth.service";
-import axios from "axios";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 type LoginFormValues = z.infer<typeof LoginFormSchema>;
-
-function getLoginErrorMessage(error: unknown): string {
-  if (!axios.isAxiosError(error)) return "Login failed. Please try again.";
-
-  const responseData: unknown = error.response?.data;
-  if (typeof responseData === "string" && responseData.trim()) return responseData;
-  if (!responseData || typeof responseData !== "object") {
-    return "Login failed. Please try again.";
-  }
-
-  const data = responseData as Record<string, unknown>;
-  for (const key of ["detail", "non_field_errors", "message"]) {
-    const value = data[key];
-    if (typeof value === "string" && value.trim()) return value;
-    if (Array.isArray(value) && value.length > 0) return value.join(" ");
-  }
-
-  const fieldErrors = Object.entries(data)
-    .filter(([, value]) => Array.isArray(value) || typeof value === "string")
-    .map(([field, value]) => {
-      const message = Array.isArray(value) ? value.join(" ") : value;
-      return `${field}: ${message}`;
-    });
-
-  return fieldErrors[0] ?? "Login failed. Please try again.";
-}
 
 function LoginForm() {
   const router = useRouter();
@@ -72,7 +46,10 @@ function LoginForm() {
         const currentUser = await fetchUser();
 
         if (!currentUser) {
-          toast.error("Login succeeded, but failed to load your profile.");
+          toast.error(
+            useAuthUserStore.getState().error ||
+            "Login succeeded, but failed to load your profile."
+          );
           return;
         }
 
@@ -84,7 +61,7 @@ function LoginForm() {
         router.replace("/dashboard");
       }
     } catch (error: unknown) {
-      toast.error(getLoginErrorMessage(error));
+      toast.error(getApiErrorMessage(error, "Login failed."));
     } finally {
       setLoading(false);
     }

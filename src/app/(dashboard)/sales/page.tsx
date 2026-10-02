@@ -29,6 +29,7 @@ import { ResourcePage } from "@/components/resource-page"
 import { ViewDialog } from "@/components/shared/view-dialog"
 import type { InventoryRow, Status } from "@/lib/inventory-data"
 import { formatCurrency, formatDate } from "@/lib/format"
+import { getApiErrorMessage, getApiErrorMessageAsync } from "@/lib/api-error"
 import { toast } from "react-toastify"
 import { Button } from "@/components/ui/button"
 
@@ -78,8 +79,8 @@ export default function SalesPage() {
                     "Only completed sales can be edited."
                 )
             }
-        } catch {
-            toast.error("Unable to load sale details.")
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to load sale details."))
         }
     }, [])
 
@@ -114,8 +115,8 @@ export default function SalesPage() {
             link.click()
             URL.revokeObjectURL(url)
             toast.success("Receipt downloaded.")
-        } catch {
-            toast.error("Unable to download this receipt.")
+        } catch (error: unknown) {
+            toast.error(await getApiErrorMessageAsync(error, "Unable to download this receipt."))
         }
     }
 
@@ -138,8 +139,8 @@ export default function SalesPage() {
             setCancelOpen(false)
             setCancelTarget(null)
             setRefreshKey((k) => k + 1)
-        } catch {
-            toast.error("Unable to cancel this sale.")
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to cancel this sale."))
         }
     }
 
@@ -200,6 +201,10 @@ export default function SalesPage() {
                         { label: "Status", status: viewingSale.status as Status },
                         { label: "Payment status", status: toPaymentStatus(viewingSale.payment_status) },
                         { label: "Subtotal", value: formatCurrency(viewingSale.subtotal) },
+                        {
+                            label: "Discount",
+                            value: `-${formatCurrency(viewingSale.discount)}`,
+                        },
                         { label: "Total", value: formatCurrency(viewingSale.total) },
                     ]}
                     sections={[
@@ -210,14 +215,22 @@ export default function SalesPage() {
                                     {viewingSale.items.map((item) => (
                                         <div
                                             key={item.uuid}
-                                            className="flex justify-between text-sm"
+                                            className="space-y-0.5 text-sm"
                                         >
-                                            <span>
-                                                {item.product_name} × {item.quantity}
-                                            </span>
-                                            <span className="text-muted-foreground">
-                                                {formatCurrency(item.subtotal)}
-                                            </span>
+                                            <div className="flex justify-between gap-4">
+                                                <span>
+                                                    {item.product_name} × {item.quantity}{" "}
+                                                    {item.product_unit_name}
+                                                </span>
+                                                <span className="text-muted-foreground">
+                                                    {formatCurrency(item.subtotal)}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                {item.quantity} × {item.conversion_factor}{" "}
+                                                = {item.base_quantity} base units removed from
+                                                stock
+                                            </p>
                                         </div>
                                     ))}
                                 </div>

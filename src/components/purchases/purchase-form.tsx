@@ -13,16 +13,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table"
 import { DialogFooter } from "@/components/ui/dialog"
 import { toast } from "react-toastify"
+import { getApiErrorMessage } from "@/lib/api-error"
 import {
     inventoryService,
     type Purchase,
@@ -30,9 +23,16 @@ import {
     type PurchaseItemPayload,
     type PurchasePayload,
     type Supplier,
+    type SupplierPayload,
+    type ProductUnit,
 } from "@/api/services/inventory.service"
 import { productService, type Product as ProductType } from "@/api/services/product.service"
 import { formatCurrency } from "@/lib/format"
+import {
+    formatUnitConversion,
+    parseWholeQuantity,
+    toBaseQuantity,
+} from "@/lib/product-units"
 
 type PurchaseFormProps = {
     mode: "create" | "edit"
@@ -44,7 +44,9 @@ type PurchaseFormProps = {
 type LineItem = {
     product: string
     product_name?: string
-    quantity: number
+    product_unit: string
+    product_unit_name?: string
+    quantity: string
     unit_cost: string
 }
 
@@ -57,6 +59,11 @@ export function PurchaseForm({
     const [suppliers, setSuppliers] = useState<Supplier[]>([])
     const [products, setProducts] = useState<ProductType[]>([])
     const [supplier, setSupplier] = useState(purchase?.supplier ?? "")
+    const [supplierMode, setSupplierMode] = useState<"existing" | "new">("existing")
+    const [newSupplierName, setNewSupplierName] = useState("")
+    const [newSupplierEmail, setNewSupplierEmail] = useState("")
+    const [newSupplierPhone, setNewSupplierPhone] = useState("")
+    const [creatingSupplier, setCreatingSupplier] = useState(false)
     const [invoiceNumber, setInvoiceNumber] = useState(
         purchase?.invoice_number ?? ""
     )
@@ -67,12 +74,14 @@ export function PurchaseForm({
     const [items, setItems] = useState<LineItem[]>(
         purchase?.items
             ? purchase.items.map((item: PurchaseItem) => ({
-                  product: item.product,
-                  product_name: item.product_name,
-                  quantity: item.quantity,
-                  unit_cost: item.unit_cost,
-              }))
-            : [{ product: "", product_name: "", quantity: 1, unit_cost: "0.00" }]
+                product: item.product,
+                product_name: item.product_name,
+                product_unit: item.product_unit,
+                product_unit_name: item.product_unit_name,
+                quantity: String(item.quantity),
+                unit_cost: item.unit_cost,
+            }))
+            : [{ product: "", product_name: "", product_unit: "", product_unit_name: "", quantity: "1", unit_cost: "0.00" }]
     )
     const [submitting, setSubmitting] = useState(false)
     const [formError, setFormError] = useState<string | null>(null)
@@ -89,9 +98,9 @@ export function PurchaseForm({
                     setSuppliers(supplierRows.filter((s) => s.is_active))
                     setProducts(productRows)
                 }
-            } catch {
+            } catch (error: unknown) {
                 if (active) {
-                    toast.error("Unable to load suppliers or products.")
+                    toast.error(getApiErrorMessage(error, "Unable to load suppliers or products."))
                 }
             }
         }
@@ -104,7 +113,7 @@ export function PurchaseForm({
     const updateItem = (
         index: number,
         field: keyof LineItem,
-        value: string | number
+        value: string
     ) => {
         setItems((prev) =>
             prev.map((item, i) =>
@@ -113,30 +122,118 @@ export function PurchaseForm({
         )
     }
 
+    /**
+     * Changing the product invalidates the previous unit: a crate configured for
+     * product A is not necessarily configured for product B. The line falls back
+     * to the new product's base unit, which is the only unit guaranteed to exist.
+     */
     const handleProductChange = (index: number, productUuid: string) => {
         const product = products.find((p) => p.uuid === productUuid)
-        updateItem(index, "product", productUuid)
-        updateItem(index, "product_name", product?.name ?? "")
-        if (product) {
-            updateItem(index, "unit_cost", product.buying_price)
+        const baseConfig = unitsFor(productUuid).find((pu) => pu.unit === product?.base_unit)
+        setItems((prev) =>
+            prev.map((item, i) =>
+                i === index
+                    ? {
+                        ...item,
+                        product: productUuid,
+                        product_name: product?.name ?? "",
+                        product_unit: baseConfig?.uuid ?? "",
+                        product_unit_name: baseConfig?.unit_name ?? "",
+                        quantity: "1",
+                        unit_cost: baseConfig?.buying_price ?? "0.00",
+                    }
+                    : item
+            )
+        )
+    }
+
+    /**
+     * Switching unit re-prices the line from that ProductUnit's own buying_price.
+     * A crate price is never derived from a bottle price - the business may buy a
+     * crate at any price, so the configured value is used as-is.
+     */
+    const handleProductUnitChange = (index: number, productUnitUuid: string) => {
+        const item = items[index]
+        const productUnit = unitFor(item.product, productUnitUuid)
+        if (!productUnit) return
+        setItems((prev) =>
+            prev.map((row, i) =>
+                i === index
+                    ? {
+                        ...row,
+                        product_unit: productUnitUuid,
+                        product_unit_name: productUnit.unit_name,
+                        // The buying price of the unit actually being purchased.
+                        unit_cost: productUnit.buying_price,
+                    }
+                    : row
+            )
+        )
+    }
+
+    const handleCreateSupplier = async () => {
+        const name = newSupplierName.trim()
+        const email = newSupplierEmail.trim()
+        const phone = newSupplierPhone.trim()
+        if (!name || !email || !phone) {
+            toast.error("Enter the supplier's full name, email, and phone number.")
+            return
+        }
+
+        setCreatingSupplier(true)
+        const payload: SupplierPayload = { name, email, phone, address: "", is_active: true }
+        try {
+            const created = await inventoryService.createSupplier(payload)
+            setSuppliers((current) => [created, ...current])
+            setSupplier(created.uuid)
+            setSupplierMode("existing")
+            setNewSupplierName("")
+            setNewSupplierEmail("")
+            setNewSupplierPhone("")
+            toast.success("Supplier created and selected.")
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to create the supplier."))
+        } finally {
+            setCreatingSupplier(false)
         }
     }
 
+    /**
+     * The purchase unit dropdown lists ONLY the ProductUnits configured for the
+     * chosen product - the same rows the product form saved and sales uses.
+     * There is no free-typed unit and no global unit list.
+     */
+    const unitsFor = (productUuid: string): ProductUnit[] => {
+        if (!productUuid) return []
+        return products
+            .find((p) => p.uuid === productUuid)
+            ?.product_units?.filter((pu) => pu.is_active) ?? []
+    }
+
+    const unitFor = (productUuid: string, productUnitUuid: string) =>
+        unitsFor(productUuid).find((pu) => pu.uuid === productUnitUuid)
+
+    const baseLabelFor = (productUuid: string) => {
+        const product = products.find((p) => p.uuid === productUuid)
+        return product?.base_unit_abbreviation || product?.base_unit_name || ""
+    }
+
     const addItem = () => {
-        setItems([
-            ...items,
-            { product: "", product_name: "", quantity: 1, unit_cost: "0.00" },
+        setItems((current) => [
+            ...current,
+            { product: "", product_name: "", product_unit: "", product_unit_name: "", quantity: "1", unit_cost: "0.00" },
         ])
     }
 
     const removeItem = (index: number) => {
         if (items.length === 1) return
-        setItems(items.filter((_, i) => i !== index))
+        setItems((prev) => prev.filter((_, i) => i !== index))
     }
 
     const total = useMemo(() => {
         return items.reduce((sum, item) => {
-            return sum + Number(item.quantity) * Number(item.unit_cost || 0)
+            const quantity = parseWholeQuantity(item.quantity) ?? 0
+            return sum + quantity * Number(item.unit_cost || 0)
         }, 0)
     }, [items])
 
@@ -150,10 +247,10 @@ export function PurchaseForm({
         }
 
         const validItems = items.filter(
-            (item) => item.product && item.quantity > 0
+            (item) => item.product && item.product_unit && parseWholeQuantity(item.quantity)
         )
         if (validItems.length === 0) {
-            setFormError("Add at least one product with a quantity.")
+            setFormError("Add at least one product with a unit and a whole quantity.")
             return
         }
 
@@ -161,6 +258,21 @@ export function PurchaseForm({
         if (new Set(productUuids).size !== productUuids.length) {
             setFormError("Each product can only be added once.")
             return
+        }
+
+        // Purchases are whole units too: 10 crates of 24 adds 240 base units.
+        for (const item of validItems) {
+            const productUnit = unitFor(item.product, item.product_unit)
+            if (!productUnit) {
+                setFormError(`Select a valid unit for ${item.product_name}.`)
+                return
+            }
+            if (parseWholeQuantity(item.quantity) === null) {
+                setFormError(
+                    `Quantity for ${item.product_name} must be a whole number (no 1.5).`
+                )
+                return
+            }
         }
 
         setSubmitting(true)
@@ -173,7 +285,8 @@ export function PurchaseForm({
             items: validItems.map(
                 (item): PurchaseItemPayload => ({
                     product: item.product,
-                    quantity: item.quantity,
+                    product_unit: item.product_unit,
+                    quantity: parseWholeQuantity(item.quantity) as number,
                     unit_cost: item.unit_cost,
                 })
             ),
@@ -188,24 +301,8 @@ export function PurchaseForm({
                 toast.success("Purchase recorded successfully.")
             }
             await onSubmit()
-        } catch (err: unknown) {
-            const apiMsg =
-                (err as {
-                    response?: {
-                        data?: {
-                            detail?: string
-                            items?: string[]
-                            __all__?: string[]
-                        }
-                    }
-                })?.response?.data
-
-            setFormError(
-                apiMsg?.items?.[0] ||
-                    apiMsg?.__all__?.[0] ||
-                    apiMsg?.detail ||
-                    "Unable to save the purchase. Please review the details and try again."
-            )
+        } catch (error: unknown) {
+            setFormError(getApiErrorMessage(error, "Unable to save the purchase."))
         } finally {
             setSubmitting(false)
         }
@@ -220,23 +317,30 @@ export function PurchaseForm({
             <div className="flex-1 overflow-y-auto space-y-6">
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <div className="space-y-2">
-                        <Label>Supplier</Label>
-                        <Select
-                            value={supplier}
-                            onValueChange={setSupplier}
-                            disabled={submitting}
-                        >
-                            <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select a supplier" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {suppliers.map((s) => (
-                                    <SelectItem key={s.uuid} value={s.uuid}>
-                                        {s.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <div className="flex items-center justify-between gap-3">
+                            <Label>Supplier</Label>
+                            <div className="flex gap-1">
+                                <Button type="button" size="sm" variant={supplierMode === "existing" ? "default" : "outline"} onClick={() => setSupplierMode("existing")} disabled={submitting}>Existing</Button>
+                                <Button type="button" size="sm" variant={supplierMode === "new" ? "default" : "outline"} onClick={() => setSupplierMode("new")} disabled={submitting}>New</Button>
+                            </div>
+                        </div>
+                        {supplierMode === "existing" ? (
+                            <Select value={supplier} onValueChange={setSupplier} disabled={submitting}>
+                                <SelectTrigger className="w-full"><SelectValue placeholder="Select a supplier" /></SelectTrigger>
+                                <SelectContent>
+                                    {suppliers.map((entry) => <SelectItem key={entry.uuid} value={entry.uuid}>{entry.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                            <div className="grid gap-2 rounded-md border border-border p-3 sm:grid-cols-3">
+                                <Input aria-label="Supplier full name" placeholder="Full name" value={newSupplierName} onChange={(event) => setNewSupplierName(event.target.value)} disabled={creatingSupplier || submitting} />
+                                <Input aria-label="Supplier email" type="email" placeholder="Email" value={newSupplierEmail} onChange={(event) => setNewSupplierEmail(event.target.value)} disabled={creatingSupplier || submitting} />
+                                <Input aria-label="Supplier phone" type="tel" placeholder="Phone" value={newSupplierPhone} onChange={(event) => setNewSupplierPhone(event.target.value)} disabled={creatingSupplier || submitting} />
+                                <Button type="button" className="sm:col-span-3 sm:justify-self-end" onClick={handleCreateSupplier} disabled={creatingSupplier || submitting}>
+                                    {creatingSupplier ? "Adding supplier…" : "Add and select supplier"}
+                                </Button>
+                            </div>
+                        )}
                     </div>
 
                     <div className="space-y-2">
@@ -264,119 +368,235 @@ export function PurchaseForm({
 
                 <div className="space-y-2">
                     <Label>Items</Label>
-                    <div className="overflow-x-auto rounded-md border border-border bg-card">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Product</TableHead>
-                                    <TableHead>Quantity</TableHead>
-                                    <TableHead>Unit cost</TableHead>
-                                    <TableHead className="text-right">
-                                        Subtotal
-                                    </TableHead>
-                                    <TableHead className="w-12 pr-2">
-                                        <span className="sr-only">Remove</span>
-                                    </TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {items.map((item, index) => (
-                                    <TableRow key={index}>
-                                        <TableCell>
-                                            <Select
-                                                value={item.product}
-                                                onValueChange={(v) =>
-                                                    handleProductChange(index, v)
-                                                }
-                                                disabled={submitting}
-                                            >
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Select a product" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {products
-                                                        .filter(
-                                                            (p) =>
-                                                                p.uuid ===
-                                                                    item.product ||
-                                                                !selectedProductUuids.has(
-                                                                    p.uuid
-                                                                )
-                                                        )
-                                                        .map((p) => (
-                                                            <SelectItem
-                                                                key={p.uuid}
-                                                                value={p.uuid}
-                                                            >
-                                                                {p.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input
-                                                type="number"
-                                                min="1"
-                                                value={item.quantity}
-                                                onChange={(e) =>
-                                                    updateItem(
-                                                        index,
-                                                        "quantity",
-                                                        Math.max(
-                                                            1,
-                                                            parseInt(
-                                                                e.target.value,
-                                                                10
-                                                            ) || 1
-                                                        )
+                    <div className="space-y-3">
+                        {items.map((item, index) => {
+                            const productUnits = unitsFor(item.product)
+                            const selectedUnit = productUnits.find(
+                                (pu) => pu.uuid === item.product_unit
+                            )
+                            const baseLabel = baseLabelFor(item.product)
+                            const unitLabel = selectedUnit
+                                ? selectedUnit.unit_abbreviation || selectedUnit.unit_name
+                                : baseLabel
+                            const enteredQuantity = parseWholeQuantity(item.quantity)
+                            const factor = selectedUnit?.conversion_factor ?? 1
+                            const baseQuantity =
+                                selectedUnit && enteredQuantity !== null
+                                    ? toBaseQuantity(enteredQuantity, factor)
+                                    : null
+                            const conversionText =
+                                enteredQuantity !== null && baseQuantity !== null
+                                    ? `${enteredQuantity} ${unitLabel} → ${baseQuantity} ${baseLabel}`
+                                    : null
+                            const invalidQuantity =
+                                item.quantity.trim() !== "" && enteredQuantity === null
+                            const subtotal =
+                                (enteredQuantity ?? 0) * Number(item.unit_cost || 0)
+
+                            return (
+                                <div
+                                    key={index}
+                                    className="grid grid-cols-1 items-start gap-3 rounded-md border border-border bg-card p-3 sm:grid-cols-2 lg:grid-cols-12"
+                                >
+                                    <div className="space-y-1 sm:col-span-2 lg:col-span-3">
+                                        <Label className="text-xs text-muted-foreground">
+                                            Product
+                                        </Label>
+                                        <Select
+                                            value={item.product}
+                                            onValueChange={(v) =>
+                                                handleProductChange(index, v)
+                                            }
+                                            disabled={submitting}
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Select a product" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {products
+                                                    .filter(
+                                                        (p) =>
+                                                            p.uuid ===
+                                                                item.product ||
+                                                            !selectedProductUuids.has(
+                                                                p.uuid
+                                                            )
                                                     )
-                                                }
-                                                disabled={submitting}
-                                                className="w-full min-w-[80px]"
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                value={item.unit_cost}
-                                                onChange={(e) =>
-                                                    updateItem(
-                                                        index,
-                                                        "unit_cost",
-                                                        e.target.value
-                                                    )
-                                                }
-                                                disabled={submitting}
-                                                className="w-full min-w-[120px]"
-                                            />
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            {formatCurrency(
-                                                Number(item.quantity) *
-                                                    Number(item.unit_cost || 0)
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="pr-2">
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => removeItem(index)}
-                                                disabled={
-                                                    submitting || items.length === 1
-                                                }
-                                            >
-                                                <Trash2 className="size-4 text-blue-600" />
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                                    .map((p) => (
+                                                        <SelectItem
+                                                            key={p.uuid}
+                                                            value={p.uuid}
+                                                        >
+                                                            {p.name}
+                                                        </SelectItem>
+                                                    ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-xs text-muted-foreground">
+                                            {baseLabel
+                                                ? `Priced per ${baseLabel}`
+                                                : "Select a product"}
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-1 lg:col-span-2">
+                                        <Label className="text-xs text-muted-foreground">
+                                            Purchase Unit
+                                        </Label>
+                                        <Select
+                                            value={item.product_unit}
+                                            onValueChange={(value) =>
+                                                handleProductUnitChange(index, value)
+                                            }
+                                            disabled={submitting || !item.product}
+                                        >
+                                            <SelectTrigger className="w-full min-w-44">
+                                                <SelectValue
+                                                    placeholder={
+                                                        item.product
+                                                            ? "Select unit"
+                                                            : "Select product first"
+                                                    }
+                                                />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {productUnits.map((pu) => (
+                                                    <SelectItem
+                                                        key={pu.uuid}
+                                                        value={pu.uuid}
+                                                    >
+                                                        {pu.unit_name}
+                                                        {pu.unit_abbreviation
+                                                            ? ` (${pu.unit_abbreviation})`
+                                                            : ""}
+                                                        {` · ${pu.conversion_factor} ${baseLabel}`}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-xs text-muted-foreground">
+                                            {selectedUnit
+                                                ? formatUnitConversion(
+                                                      selectedUnit,
+                                                      baseLabel
+                                                  )
+                                                : item.product
+                                                  ? "Select unit"
+                                                  : "Choose a product to load its units"}
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-1 lg:col-span-1">
+                                        <Label
+                                            className="text-xs text-muted-foreground"
+                                            htmlFor={`purchase-quantity-${index}`}
+                                        >
+                                            Quantity
+                                        </Label>
+                                        <Input
+                                            id={`purchase-quantity-${index}`}
+                                            type="number"
+                                            step={1}
+                                            min={1}
+                                            value={item.quantity}
+                                            onChange={(e) =>
+                                                updateItem(
+                                                    index,
+                                                    "quantity",
+                                                    e.target.value
+                                                )
+                                            }
+                                            disabled={submitting}
+                                            aria-invalid={invalidQuantity}
+                                            className="w-full min-w-20"
+                                        />
+                                        <p
+                                            className={`text-xs ${
+                                                invalidQuantity
+                                                    ? "text-destructive"
+                                                    : "text-muted-foreground"
+                                            }`}
+                                        >
+                                            {invalidQuantity
+                                                ? "Whole numbers only"
+                                                : selectedUnit
+                                                  ? `of ${unitLabel}`
+                                                  : "Select a unit first"}
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-1 lg:col-span-2">
+                                        <Label className="text-xs text-muted-foreground">
+                                            Conversion
+                                        </Label>
+                                        <p className="text-sm font-medium leading-6">
+                                            {conversionText ?? "\u2014"}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {baseQuantity !== null
+                                                ? `Adds +${baseQuantity} ${baseLabel} to stock`
+                                                : "Select a unit"}
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-1 lg:col-span-2">
+                                        <Label
+                                            className="text-xs text-muted-foreground"
+                                            htmlFor={`purchase-unit-cost-${index}`}
+                                        >
+                                            Unit Cost
+                                        </Label>
+                                        <Input
+                                            id={`purchase-unit-cost-${index}`}
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={item.unit_cost}
+                                            onChange={(e) =>
+                                                updateItem(
+                                                    index,
+                                                    "unit_cost",
+                                                    e.target.value
+                                                )
+                                            }
+                                            disabled={submitting}
+                                            className="w-full min-w-30"
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            {selectedUnit
+                                                ? `Per ${unitLabel}`
+                                                : "Select a unit first"}
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-1 lg:col-span-1">
+                                        <Label className="text-xs text-muted-foreground">
+                                            Subtotal
+                                        </Label>
+                                        <p className="text-sm font-medium leading-6 text-right lg:text-left">
+                                            {formatCurrency(subtotal)}
+                                        </p>
+                                    </div>
+
+                                    <div className="flex items-start justify-end lg:col-span-1">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => removeItem(index)}
+                                            disabled={
+                                                submitting || items.length === 1
+                                            }
+                                            aria-label={`Remove item ${index + 1}`}
+                                        >
+                                            <Trash2 className="size-4 text-blue-600" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            )
+                        })}
                     </div>
+
 
                     <Button
                         type="button"
@@ -436,8 +656,8 @@ export function PurchaseForm({
                             ? "Saving…"
                             : "Recording…"
                         : mode === "edit"
-                          ? "Save changes"
-                          : "Record purchase"}
+                            ? "Save changes"
+                            : "Record purchase"}
                 </Button>
             </DialogFooter>
         </form>

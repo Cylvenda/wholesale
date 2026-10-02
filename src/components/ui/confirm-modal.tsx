@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
+import { toast } from "react-toastify"
+import { getApiErrorMessage } from "@/lib/api-error"
 
 interface ConfirmModalProps {
   isOpen: boolean
@@ -40,8 +42,8 @@ export function ConfirmModal({
       setIsLoading(true)
       await onConfirm()
       onClose()
-    } catch (error) {
-      console.error("Confirmation action failed:", error)
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, "The requested action could not be completed."))
     } finally {
       setIsLoading(false)
     }

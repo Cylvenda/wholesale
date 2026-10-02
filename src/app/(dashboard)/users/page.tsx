@@ -26,6 +26,7 @@ import { ResourcePage } from "@/components/resource-page"
 import { ViewDialog } from "@/components/shared/view-dialog"
 import type { InventoryRow, Status } from "@/lib/inventory-data"
 import { formatDate } from "@/lib/format"
+import { getApiErrorMessage } from "@/lib/api-error"
 import { Button } from "@/components/ui/button"
 
 function toUserRole(role: string): Status {
@@ -74,8 +75,8 @@ export default function UsersPage() {
             const user = await userServices.getUser(row.id)
             setEditingUser(user)
             setFormOpen(true)
-        } catch {
-            toast.error("Unable to load user details.")
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to load user details."))
         }
     }, [])
 
@@ -110,8 +111,8 @@ export default function UsersPage() {
             setDeleteOpen(false)
             setDeleteTarget(null)
             setRefreshKey((k) => k + 1)
-        } catch {
-            toast.error("Unable to delete this user. It may be protected.")
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to delete this user. It may be protected."))
         }
     }
 
@@ -124,8 +125,8 @@ export default function UsersPage() {
                     : "User activated."
             )
             setRefreshKey((k) => k + 1)
-        } catch {
-            toast.error("Unable to update user status.")
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to update user status."))
         }
     }
 

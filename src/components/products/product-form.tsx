@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,16 +16,14 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { DialogFooter } from "@/components/ui/dialog"
 import { toast } from "react-toastify"
-import {
-    productService,
-    type Product,
-    type ProductPayload,
-} from "@/api/services/product.service"
+import { getApiErrorMessage } from "@/lib/api-error"
 import {
     inventoryService,
     type Brand,
     type Unit,
 } from "@/api/services/inventory.service"
+import { productService, type Product, type ProductPayload } from "@/api/services/product.service"
+import type { ProductUnitPayload } from "@/api/types"
 
 type ProductFormProps = {
     mode: "create" | "edit"
@@ -33,17 +32,35 @@ type ProductFormProps = {
     onSubmit: () => Promise<void>
 }
 
+type ProductUnitFormData = ProductUnitPayload & {
+    unit_name?: string
+    unit_abbreviation?: string | null
+}
+
 export function ProductForm({ mode, product, onCancel, onSubmit }: ProductFormProps) {
     const [brands, setBrands] = useState<Brand[]>([])
     const [units, setUnits] = useState<Unit[]>([])
     const [dataLoaded, setDataLoaded] = useState(false)
     const [name, setName] = useState(product?.name ?? "")
     const [brand, setBrand] = useState(product?.brand ?? "")
-    const [unit, setUnit] = useState(product?.unit ?? "")
+    const [baseUnit, setBaseUnit] = useState(product?.base_unit ?? "")
     const [buyingPrice, setBuyingPrice] = useState(product?.buying_price ?? "")
     const [sellingPrice, setSellingPrice] = useState(product?.selling_price ?? "")
     const [description, setDescription] = useState(product?.description ?? "")
     const [isActive, setIsActive] = useState(product?.is_active ?? true)
+    const [productUnits, setProductUnits] = useState<ProductUnitFormData[]>(() =>
+        (product?.product_units ?? [])
+            .filter((pu) => pu.is_active)
+            .map((pu) => ({
+                unit: pu.unit,
+                unit_name: pu.unit_name,
+                unit_abbreviation: pu.unit_abbreviation,
+                conversion_factor: String(pu.conversion_factor),
+                buying_price: pu.buying_price,
+                selling_price: pu.selling_price,
+                is_active: pu.is_active,
+            }))
+    )
     const [submitting, setSubmitting] = useState(false)
     const [formError, setFormError] = useState<string | null>(null)
 
@@ -58,12 +75,12 @@ export function ProductForm({ mode, product, onCancel, onSubmit }: ProductFormPr
                 ])
                 if (active) {
                     setBrands(brandRows)
-                    setUnits(unitRows)
+                    setUnits(unitRows.filter(u => u.is_active))
                     setDataLoaded(true)
                 }
-            } catch {
+            } catch (error: unknown) {
                 if (active) {
-                    toast.error("Unable to load brands or units.")
+                    toast.error(getApiErrorMessage(error, "Unable to load brands or units."))
                 }
             }
         }
@@ -73,6 +90,29 @@ export function ProductForm({ mode, product, onCancel, onSubmit }: ProductFormPr
             active = false
         }
     }, [])
+
+    const handleBaseUnitChange = (value: string) => {
+        setBaseUnit(value)
+        // Keep the base unit row present and fixed at a conversion factor of 1.
+        setProductUnits((current) => {
+            const existing = current.find((pu) => pu.unit === value)
+            const baseRow: ProductUnitFormData = existing
+                ? { ...existing, conversion_factor: "1" }
+                : {
+                      unit: value,
+                      conversion_factor: "1",
+                      buying_price: buyingPrice || "0",
+                      selling_price: sellingPrice || "0",
+                      is_active: true,
+                  }
+
+            if (current.length === 0) return [baseRow]
+            return [
+                baseRow,
+                ...current.filter((pu) => pu.unit !== value && pu.unit !== baseUnit),
+            ]
+        })
+    }
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault()
@@ -86,8 +126,8 @@ export function ProductForm({ mode, product, onCancel, onSubmit }: ProductFormPr
             setFormError("Please select a brand.")
             return
         }
-        if (!unit) {
-            setFormError("Please select a unit.")
+        if (!baseUnit) {
+            setFormError("Please select a base unit.")
             return
         }
         if (!buyingPrice) {
@@ -99,16 +139,68 @@ export function ProductForm({ mode, product, onCancel, onSubmit }: ProductFormPr
             return
         }
 
+        // Conversion factors are whole numbers: how many base units one unit holds.
+        const fractionalUnits = productUnits.filter(
+            pu => pu.unit && !/^\d+$/.test(String(pu.conversion_factor).trim())
+        )
+        if (fractionalUnits.length > 0) {
+            setFormError("Conversion factors must be whole numbers, for example 24.")
+            return
+        }
+
+        // Validate product units
+        const validUnits = productUnits.filter(pu => pu.unit && Number(pu.conversion_factor) >= 1)
+        if (validUnits.length === 0) {
+            setFormError("At least one product unit is required.")
+            return
+        }
+
+        // A non-base unit must hold more than one base unit, otherwise it is a duplicate of the base unit.
+        const redundantUnit = validUnits.find(
+            pu => pu.unit !== baseUnit && Number(pu.conversion_factor) === 1
+        )
+        if (redundantUnit) {
+            setFormError(
+                "Only the base unit can have a conversion factor of 1. Every other unit must state how many base units it holds."
+            )
+            return
+        }
+
+        // Check base unit has conversion_factor = 1
+        const baseUnitConfig = validUnits.find(pu => pu.unit === baseUnit)
+        if (!baseUnitConfig) {
+            setFormError("Base unit must be configured as a product unit.")
+            return
+        }
+        if (Number(baseUnitConfig.conversion_factor) !== 1) {
+            setFormError("Base unit must have conversion factor of 1.")
+            return
+        }
+
+        // Check for duplicate units
+        const unitIds = validUnits.map(pu => pu.unit)
+        if (new Set(unitIds).size !== unitIds.length) {
+            setFormError("Duplicate units are not allowed.")
+            return
+        }
+
         setSubmitting(true)
 
         const payload: ProductPayload = {
             name: name.trim(),
             brand,
-            unit,
+            base_unit: baseUnit,
             buying_price: buyingPrice,
             selling_price: sellingPrice,
-            description: description.trim() || undefined,
+            description: description.trim(),
             is_active: isActive,
+            product_units: validUnits.map(pu => ({
+                unit: pu.unit,
+                conversion_factor: pu.conversion_factor,
+                buying_price: pu.buying_price,
+                selling_price: pu.selling_price,
+                is_active: pu.is_active ?? true,
+            })),
         }
 
         try {
@@ -120,13 +212,48 @@ export function ProductForm({ mode, product, onCancel, onSubmit }: ProductFormPr
                 toast.success("Product created successfully.")
             }
             await onSubmit()
-        } catch {
-            setFormError(
-                "Unable to save the product. Please review the details and try again."
-            )
+        } catch (error: unknown) {
+            setFormError(getApiErrorMessage(error, "Unable to save the product."))
         } finally {
             setSubmitting(false)
         }
+    }
+
+    const updateProductUnit = (index: number, field: keyof ProductUnitFormData, value: string | number | boolean) => {
+        setProductUnits(prev =>
+            prev.map((pu, i) =>
+                i === index ? { ...pu, [field]: value } : pu
+            )
+        )
+    }
+
+    const addProductUnit = () => {
+        const availableUnits = units.filter(
+            u => !productUnits.some(pu => pu.unit === u.uuid)
+        )
+        if (availableUnits.length === 0) {
+            toast.info("All available units are already configured.")
+            return
+        }
+        setProductUnits([
+            ...productUnits,
+            {
+                unit: availableUnits[0].uuid,
+                conversion_factor: "1",
+                buying_price: "0",
+                selling_price: "0",
+                is_active: true,
+            }
+        ])
+    }
+
+    const removeProductUnit = (index: number) => {
+        const pu = productUnits[index]
+        if (pu.unit === baseUnit) {
+            toast.error("Cannot remove the base unit.")
+            return
+        }
+        setProductUnits(productUnits.filter((_, i) => i !== index))
     }
 
     return (
@@ -164,10 +291,13 @@ export function ProductForm({ mode, product, onCancel, onSubmit }: ProductFormPr
                 </div>
 
                 <div className="space-y-2">
-                    <Label>Unit</Label>
+                    <Label>Base Unit</Label>
+                    <p className="text-xs text-muted-foreground">
+                        The smallest unit used for inventory calculations. All other units convert to this.
+                    </p>
                     <Select
-                        value={unit}
-                        onValueChange={setUnit}
+                        value={baseUnit}
+                        onValueChange={handleBaseUnitChange}
                         disabled={submitting || !dataLoaded || units.length === 0}
                     >
                         <SelectTrigger>
@@ -191,7 +321,7 @@ export function ProductForm({ mode, product, onCancel, onSubmit }: ProductFormPr
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div className="space-y-2">
-                    <Label htmlFor="buying-price">Buying price</Label>
+                    <Label htmlFor="buying-price">Base Buying Price</Label>
                     <Input
                         id="buying-price"
                         type="number"
@@ -204,7 +334,7 @@ export function ProductForm({ mode, product, onCancel, onSubmit }: ProductFormPr
                 </div>
 
                 <div className="space-y-2">
-                    <Label htmlFor="selling-price">Selling price</Label>
+                    <Label htmlFor="selling-price">Base Selling Price</Label>
                     <Input
                         id="selling-price"
                         type="number"
@@ -214,6 +344,115 @@ export function ProductForm({ mode, product, onCancel, onSubmit }: ProductFormPr
                         disabled={submitting}
                         placeholder="0.00"
                     />
+                </div>
+            </div>
+
+            <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <Label>Product Units</Label>
+                    <p className="text-xs text-muted-foreground">
+                        Configure units this product can be sold/purchased in. Base unit must have conversion factor = 1.
+                    </p>
+                </div>
+
+                <div className="space-y-2">
+                    <div className="grid grid-cols-[auto_auto_1fr_1fr_1fr_auto] gap-2 text-xs font-medium text-muted-foreground px-2">
+                        <span>Unit</span>
+                        <span>Base units inside</span>
+                        <span>Buy Price</span>
+                        <span>Sell Price</span>
+                        <span>Active</span>
+                        <span></span>
+                    </div>
+
+                    {productUnits.map((pu, index) => (
+                        <div key={index} className="grid grid-cols-[auto_auto_1fr_1fr_1fr_auto] gap-2 items-center">
+                            <Select
+                                value={pu.unit}
+                                onValueChange={(value) => updateProductUnit(index, "unit", value)}
+                                disabled={submitting || pu.unit === baseUnit}
+                            >
+                                <SelectTrigger className="w-full min-w-0">
+                                    <SelectValue placeholder="Select unit" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {units
+                                        .filter(u => !productUnits.some((p, i) => i !== index && p.unit === u.uuid))
+                                        .map((u) => (
+                                            <SelectItem key={u.uuid} value={u.uuid}>
+                                                {u.name}{" "}
+                                                {u.abbreviation && `(${u.abbreviation})`}
+                                            </SelectItem>
+                                        ))}
+                                </SelectContent>
+                            </Select>
+
+                            <Input
+                                type="number"
+                                step={1}
+                                min={1}
+                                value={pu.conversion_factor}
+                                onChange={(e) => updateProductUnit(index, "conversion_factor", e.target.value)}
+                                disabled={submitting || pu.unit === baseUnit}
+                                className="w-24"
+                                placeholder={pu.unit === baseUnit ? "1" : ""}
+                            />
+
+                            <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={pu.buying_price}
+                                onChange={(e) => updateProductUnit(index, "buying_price", e.target.value)}
+                                disabled={submitting}
+                                className="w-full"
+                                placeholder="0.00"
+                            />
+
+                            <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={pu.selling_price}
+                                onChange={(e) => updateProductUnit(index, "selling_price", e.target.value)}
+                                disabled={submitting}
+                                className="w-full"
+                                placeholder="0.00"
+                            />
+
+                            <label className="flex items-center justify-center">
+                                <input
+                                    type="checkbox"
+                                    checked={pu.is_active ?? true}
+                                    onChange={(e) => updateProductUnit(index, "is_active", e.target.checked)}
+                                    disabled={submitting || pu.unit === baseUnit}
+                                    className="size-4"
+                                />
+                            </label>
+
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeProductUnit(index)}
+                                disabled={submitting || pu.unit === baseUnit}
+                                className="text-destructive"
+                            >
+                                <Trash2 className="size-4" />
+                            </Button>
+                        </div>
+                    ))}
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addProductUnit}
+                        disabled={submitting || productUnits.length >= units.length}
+                    >
+                        <Plus className="size-4" />
+                        Add Unit
+                    </Button>
                 </div>
             </div>
 
@@ -265,8 +504,8 @@ export function ProductForm({ mode, product, onCancel, onSubmit }: ProductFormPr
                             ? "Saving…"
                             : "Creating…"
                         : mode === "edit"
-                          ? "Save changes"
-                          : "Create product"}
+                            ? "Save changes"
+                            : "Create product"}
                 </Button>
             </DialogFooter>
         </form>

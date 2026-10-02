@@ -94,26 +94,26 @@ export function ReceiptDocument({ receipt, onDownload }: ReceiptDocumentProps) {
                 </dl>
 
                 <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200">
-                <table className="w-full min-w-[520px] text-sm">
-                    <thead>
-                        <tr className="bg-blue-700 text-left text-white">
-                            <th className="px-3 py-3 font-semibold">Item</th>
-                            <th className="px-3 py-3 text-right font-semibold">Qty</th>
-                            <th className="px-3 py-3 text-right font-semibold">Unit price</th>
-                            <th className="px-3 py-3 text-right font-semibold">Line total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {receipt.items.map((item) => (
-                            <tr key={item.uuid} className="border-b border-slate-100">
-                                <td className="px-3 py-3 font-medium">{item.product_name}</td>
-                                <td className="px-3 py-3 text-right tabular-nums">{item.quantity}</td>
-                                <td className="px-3 py-3 text-right tabular-nums">{formatMoney(item.unit_price)}</td>
-                                <td className="px-3 py-3 text-right tabular-nums font-medium">{formatMoney(item.line_total)}</td>
+                    <table className="w-full min-w-130 text-sm">
+                        <thead>
+                            <tr className="bg-blue-700 text-left text-white">
+                                <th className="px-3 py-3 font-semibold">Item</th>
+                                <th className="px-3 py-3 text-right font-semibold">Qty</th>
+                                <th className="px-3 py-3 text-right font-semibold">Unit price</th>
+                                <th className="px-3 py-3 text-right font-semibold">Line total</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {receipt.items.map((item) => (
+                                <tr key={item.uuid} className="border-b border-slate-100">
+                                    <td className="px-3 py-3 font-medium">{item.product_name}</td>
+                                    <td className="px-3 py-3 text-right tabular-nums">{Number(item.quantity).toLocaleString("en-TZ")} {item.unit}</td>
+                                    <td className="px-3 py-3 text-right tabular-nums">{formatMoney(item.unit_price)}</td>
+                                    <td className="px-3 py-3 text-right tabular-nums font-medium">{formatMoney(item.line_total)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
 
                 <dl className="ml-auto mt-5 w-full max-w-xs text-sm">

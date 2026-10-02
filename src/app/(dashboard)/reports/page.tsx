@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { PageHeader } from "@/components/shared/page-header"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { getApiErrorMessage, getApiErrorMessageAsync } from "@/lib/api-error"
 
 type DownloadKind = "purchases" | "sales" | null
 
@@ -58,8 +59,8 @@ export default function ReportsPage() {
                 setSuppliers(supplierResponse)
                 setCustomers(customerResponse)
             })
-            .catch(() => {
-                if (active) toast.error("Unable to load report filters.")
+            .catch((error: unknown) => {
+                if (active) toast.error(getApiErrorMessage(error, "Unable to load report filters."))
             })
             .finally(() => {
                 if (active) setOptionsLoading(false)
@@ -94,8 +95,8 @@ export default function ReportsPage() {
             })
             saveReport(report)
             toast.success("Purchase report downloaded.")
-        } catch {
-            toast.error("Unable to download the purchase report.")
+        } catch (error: unknown) {
+            toast.error(await getApiErrorMessageAsync(error, "Unable to download the purchase report."))
         } finally {
             setDownloading(null)
         }
@@ -117,8 +118,8 @@ export default function ReportsPage() {
             })
             saveReport(report)
             toast.success("Completed sales report downloaded.")
-        } catch {
-            toast.error("Unable to download the sales report.")
+        } catch (error: unknown) {
+            toast.error(await getApiErrorMessageAsync(error, "Unable to download the sales report."))
         } finally {
             setDownloading(null)
         }

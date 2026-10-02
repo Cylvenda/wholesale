@@ -7,10 +7,12 @@ import { inventoryService, type DashboardStats } from "@/api/services/inventory.
 import { KpiCards } from "@/components/dashboard/KpiCards"
 import { SalesChart } from "@/components/dashboard/SalesChart"
 import { DealsTable } from "@/components/dashboard/DealsTable"
+import { getApiErrorMessage } from "@/lib/api-error"
 
 interface ChartPoint {
     day: string
     date: string
+    /** Plotted values. The exact money is shown on the summary cards. */
     amount: number
     purchases: number
 }
@@ -25,19 +27,11 @@ export default function DashboardPage() {
         try {
             const statsData = await inventoryService.getDashboardStats(period)
 
-            const chartData: ChartPoint[] = statsData.chart_data.map((point) => ({
-                day: point.day,
-                date: point.date,
-                amount: point.amount,
-                purchases: point.purchases ?? 0,
-            }))
-
-            setStats({
-                ...statsData,
-                chart_data: chartData,
-            })
-        } catch {
-            toast.error("Unable to load dashboard statistics.")
+            // State keeps the exact decimal money from the backend; the chart
+            // converts to numbers only where it plots them.
+            setStats(statsData)
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to load dashboard statistics."))
         } finally {
             setLoading(false)
         }
@@ -65,11 +59,11 @@ export default function DashboardPage() {
         return null
     }
 
-    const chartData = stats.chart_data.map((point) => ({
+    const chartData: ChartPoint[] = stats.chart_data.map((point) => ({
         day: point.day,
         date: point.date,
-        amount: point.amount,
-        purchases: point.purchases ?? 0,
+        amount: Number(point.amount || 0),
+        purchases: Number(point.purchases ?? 0),
     }))
 
     return (

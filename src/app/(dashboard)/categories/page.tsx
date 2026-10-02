@@ -34,20 +34,11 @@ import { DialogFooter as FormDialogFooter } from "@/components/ui/dialog"
 import { ResourcePage } from "@/components/resource-page"
 import type { InventoryRow } from "@/lib/inventory-data"
 import { formatDate } from "@/lib/format"
+import { getApiErrorMessage } from "@/lib/api-error"
 
 const emptyForm: CategoryPayload = {
     name: "",
     description: "",
-}
-
-function messageFrom(error: unknown, fallback: string) {
-    if (typeof error === "object" && error && "response" in error) {
-        const response = error.response as {
-            data?: { detail?: string }
-        }
-        return response.data?.detail ?? fallback
-    }
-    return fallback
 }
 
 function toRows(categories: Category[]): InventoryRow[] {
@@ -78,9 +69,9 @@ export default function CategoriesPage() {
         setForm(
             category
                 ? {
-                      name: category.name,
-                      description: category.description,
-                  }
+                    name: category.name,
+                    description: category.description,
+                }
                 : emptyForm
         )
         setFormError(null)
@@ -113,12 +104,7 @@ export default function CategoriesPage() {
             setFormOpen(false)
             refresh()
         } catch (submitError) {
-            setFormError(
-                messageFrom(
-                    submitError,
-                    "Unable to save the category. It may already exist."
-                )
-            )
+            setFormError(getApiErrorMessage(submitError, "Unable to save the category."))
         } finally {
             setSubmitting(false)
         }
@@ -132,10 +118,8 @@ export default function CategoriesPage() {
             toast.success("Category deleted successfully.")
             setDeleting(null)
             refresh()
-        } catch {
-            toast.error(
-                "Unable to delete this category. It may be in use by brands."
-            )
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to delete this category. It may be in use by brands."))
         } finally {
             setSubmitting(false)
         }
@@ -252,8 +236,8 @@ export default function CategoriesPage() {
                                 {submitting
                                     ? "Saving…"
                                     : editing
-                                      ? "Save changes"
-                                      : "Create category"}
+                                        ? "Save changes"
+                                        : "Create category"}
                             </Button>
                         </FormDialogFooter>
                     </form>

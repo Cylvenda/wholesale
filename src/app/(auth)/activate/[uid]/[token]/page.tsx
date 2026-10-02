@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import { CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 type ActivationState = "loading" | "success" | "error";
 
@@ -37,10 +38,7 @@ export default function ActivateAccountPage() {
         setMessage("Account activated successfully. You can now log in to the Community Hub platform.");
         toast.success("Account activated successfully.");
       } catch (error: unknown) {
-        const detail =
-          (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
-          "Activation failed. The link may be invalid or expired.";
-
+        const detail = getApiErrorMessage(error, "Activation failed. The link may be invalid or expired.");
         setStatus("error");
         setMessage(detail);
       }
@@ -63,10 +61,7 @@ export default function ActivateAccountPage() {
       toast.success(tt("Activation email sent. Please check your inbox.", "Barua ya kuwezesha akaunti imetumwa. Angalia kikasha chako."));
       setEmail("");
     } catch (error: unknown) {
-      const detail =
-        (error as { response?: { data?: { detail?: string; email?: string[] } } })?.response?.data;
-      const msg = detail?.detail || detail?.email?.[0] || tt("Could not resend activation email.", "Imeshindikana kutuma tena barua ya kuwezesha akaunti.");
-      toast.error(msg);
+      toast.error(getApiErrorMessage(error, tt("Could not resend activation email.", "Imeshindikana kutuma tena barua ya kuwezesha akaunti.")));
     } finally {
       setResending(false);
     }
@@ -109,7 +104,7 @@ export default function ActivateAccountPage() {
                 </p>
               </div>
             </div>
-            
+
             <Button
               className="w-full py-6 bg-chart-3 text-primary-foreground font-bold hover:bg-chart-2 rounded-xl transition-all duration-300 shadow-md hover:shadow-chart-3/20"
               onClick={() => router.push("/login")}
@@ -138,7 +133,7 @@ export default function ActivateAccountPage() {
               <p className="text-xs font-medium text-muted-foreground">
                 {tt("Need a new verification link? Enter your email below to request one.", "Unahitaji kiungo kipya cha uthibitishaji? Ingiza barua pepe yako hapa chini.")}
               </p>
-              
+
               <form onSubmit={handleResendActivation} className="space-y-3">
                 <input
                   type="email"
@@ -147,7 +142,7 @@ export default function ActivateAccountPage() {
                   placeholder={tt("Enter your email", "Ingiza barua pepe yako")}
                   className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm focus-visible:ring-2 focus-visible:ring-chart-3/40 focus-visible:border-chart-3 transition-all"
                 />
-                
+
                 <Button
                   type="submit"
                   disabled={resending}

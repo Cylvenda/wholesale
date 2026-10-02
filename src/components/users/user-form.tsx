@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import axios from "axios"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,6 +14,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { DialogFooter } from "@/components/ui/dialog"
 import { toast } from "react-toastify"
+import { getApiErrorMessage } from "@/lib/api-error"
 import { userServices, type UserAdminResponse, type UserAdminPayload } from "@/api/services/user.service"
 
 type UserFormProps = {
@@ -39,28 +39,6 @@ const passwordRequirements = [
     { label: "One number", test: (value: string) => /[0-9]/.test(value) },
     { label: "One special character", test: (value: string) => /[^a-zA-Z0-9]/.test(value) },
 ]
-
-function getBackendError(error: unknown): string {
-    if (!axios.isAxiosError(error)) {
-        return error instanceof Error
-            ? error.message
-            : "Unable to save the user. Please try again."
-    }
-
-    const collectMessages = (value: unknown): string[] => {
-        if (typeof value === "string" && value.trim()) return [value.trim()]
-        if (Array.isArray(value)) return value.flatMap(collectMessages)
-        if (value && typeof value === "object") {
-            return Object.values(value as Record<string, unknown>).flatMap(collectMessages)
-        }
-        return []
-    }
-
-    const messages = collectMessages(error.response?.data)
-    return messages.length
-        ? messages.join(" ")
-        : error.message || "Unable to save the user. Please try again."
-}
 
 export function UserForm({ mode, user, onCancel, onSubmit }: UserFormProps) {
     const [firstName, setFirstName] = useState(user?.first_name ?? "")
@@ -110,7 +88,7 @@ export function UserForm({ mode, user, onCancel, onSubmit }: UserFormProps) {
             }
             await onSubmit()
         } catch (error: unknown) {
-            toast.error(getBackendError(error))
+            toast.error(getApiErrorMessage(error, "Unable to save the user."))
         } finally {
             setSubmitting(false)
         }

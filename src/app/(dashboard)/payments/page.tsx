@@ -29,6 +29,7 @@ import { ResourcePage } from "@/components/resource-page"
 import { ViewDialog } from "@/components/shared/view-dialog"
 import type { InventoryRow } from "@/lib/inventory-data"
 import { formatCurrency, formatDate } from "@/lib/format"
+import { getApiErrorMessage } from "@/lib/api-error"
 import { toast } from "react-toastify"
 import { Button } from "@/components/ui/button"
 
@@ -92,8 +93,8 @@ export default function PaymentsPage() {
         try {
             const data = await inventoryService.getPaymentsSummary()
             setSummary(toSummary(data))
-        } catch {
-            // Summary may not be available
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to load payment summary."))
         }
     }, [])
 
@@ -107,8 +108,8 @@ export default function PaymentsPage() {
             const payment = await inventoryService.getPayment(row.id)
             setEditingPayment(payment)
             setFormOpen(true)
-        } catch {
-            toast.error("Unable to load payment details.")
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to load payment details."))
         }
     }, [])
 
@@ -136,8 +137,8 @@ export default function PaymentsPage() {
             toast.success("Payment deleted successfully.")
             setDeletingPayment(null)
             setRefreshKey((k) => k + 1)
-        } catch {
-            toast.error("Unable to delete this payment.")
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to delete this payment."))
         }
     }
 
@@ -172,8 +173,14 @@ export default function PaymentsPage() {
                     fields={[
                         { label: "Customer", value: viewingPayment.customer_name || "—" },
                         { label: "Amount", value: formatCurrency(viewingPayment.amount) },
+                        { label: "Sale total", value: formatCurrency(viewingPayment.sale_total ?? 0) },
+                        { label: "Paid to date", value: formatCurrency(viewingPayment.amount_paid) },
+                        {
+                            label: "Balance left",
+                            value: formatCurrency(viewingPayment.outstanding_balance),
+                        },
                         { label: "Method", value: viewingPayment.method.replaceAll("_", " ") },
-                        { label: "Reference", value: viewingPayment.reference || "—" },
+                        { label: "Reference", value: viewingPayment.reference || viewingPayment.reference_code },
                         { label: "Date", value: formatDate(viewingPayment.payment_date) },
                     ]}
                     sections={[

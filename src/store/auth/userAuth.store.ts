@@ -3,6 +3,7 @@ import { create } from "zustand"
 import type { User } from "./auth.types"
 import { userServices } from "@/api/services/user.service"
 import { authUserService } from "@/api/services/auth.service"
+import { getApiErrorMessage } from "@/lib/api-error"
 
 type AuthState = {
      loading: boolean
@@ -30,27 +31,27 @@ export const useAuthUserStore = create<AuthState>((set, get) => ({
           set({ loading: true, error: null })
           try {
                const res = await userServices.getUserMe()
-                const userData: User = {
-                     uuid: res.data.uuid,
-                     firstName: res.data.first_name || "",
-                     lastName: res.data.last_name || "",
-                     email: res.data.email,
-                     phone: res.data.phone,
-                     username: res.data.username || "",
-                     isActive: res.data.is_active,
-                     isAdmin: res.data.role === "admin" || res.data.is_superuser,
-                     isStaff: res.data.is_staff,
-                     role: res.data.role || "salesperson",
-                }
-                set({
-                     user: userData,
-                     isAuthenticated: true,
-                     isLoggedIn: true,
-                     loading: false,
-                })
-                return userData
+               const userData: User = {
+                    uuid: res.data.uuid,
+                    firstName: res.data.first_name || "",
+                    lastName: res.data.last_name || "",
+                    email: res.data.email,
+                    phone: res.data.phone,
+                    username: res.data.username || "",
+                    isActive: res.data.is_active,
+                    isAdmin: res.data.role === "admin" || res.data.is_superuser,
+                    isStaff: res.data.is_staff,
+                    role: res.data.role || "salesperson",
+               }
+               set({
+                    user: userData,
+                    isAuthenticated: true,
+                    isLoggedIn: true,
+                    loading: false,
+               })
+               return userData
           } catch (err: unknown) {
-               const message = err instanceof Error ? err.message : "Failed to fetch user"
+               const message = getApiErrorMessage(err, "Failed to fetch user.")
                set({
                     user: null,
                     isAuthenticated: false,
@@ -66,18 +67,18 @@ export const useAuthUserStore = create<AuthState>((set, get) => ({
           set({ loading: true, error: null })
           try {
                const res = await userServices.updateUserMe(payload)
-                const userData: User = {
-                     uuid: res.data.uuid,
-                     firstName: res.data.first_name || "",
-                     lastName: res.data.last_name || "",
-                     email: res.data.email,
-                     phone: res.data.phone,
-                     username: res.data.username || "",
-                     isActive: res.data.is_active,
-                     isAdmin: res.data.role === "admin" || res.data.is_superuser,
-                     isStaff: res.data.is_staff,
-                     role: res.data.role || "salesperson",
-                }
+               const userData: User = {
+                    uuid: res.data.uuid,
+                    firstName: res.data.first_name || "",
+                    lastName: res.data.last_name || "",
+                    email: res.data.email,
+                    phone: res.data.phone,
+                    username: res.data.username || "",
+                    isActive: res.data.is_active,
+                    isAdmin: res.data.role === "admin" || res.data.is_superuser,
+                    isStaff: res.data.is_staff,
+                    role: res.data.role || "salesperson",
+               }
                set({
                     user: userData,
                     isAuthenticated: true,
@@ -86,7 +87,7 @@ export const useAuthUserStore = create<AuthState>((set, get) => ({
                })
                return { success: true, message: "Profile updated successfully.", user: userData }
           } catch (err: unknown) {
-               const message = err instanceof Error ? err.message : "Failed to update profile"
+               const message = getApiErrorMessage(err, "Failed to update profile.")
                set({
                     loading: false,
                     error: message,
@@ -144,7 +145,7 @@ export const useAuthUserStore = create<AuthState>((set, get) => ({
                     loading: false,
                })
           } catch (err: unknown) {
-               const message = err instanceof Error ? err.message : "Logout failed"
+               const message = getApiErrorMessage(err, "Logout failed.")
                set({
                     user: null,
                     isAuthenticated: false,

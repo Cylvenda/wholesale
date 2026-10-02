@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { DialogFooter } from "@/components/ui/dialog"
 import { toast } from "react-toastify"
+import { getApiErrorMessage } from "@/lib/api-error"
 import {
     inventoryService,
     type Customer,
@@ -65,10 +66,8 @@ export function CustomerForm({
                 toast.success("Customer created successfully.")
             }
             await onSubmit()
-        } catch {
-            setFormError(
-                "Unable to save the customer. Please review the details and try again."
-            )
+        } catch (error: unknown) {
+            setFormError(getApiErrorMessage(error, "Unable to save the customer."))
         } finally {
             setSubmitting(false)
         }
@@ -159,8 +158,8 @@ export function CustomerForm({
                             ? "Saving…"
                             : "Creating…"
                         : mode === "edit"
-                          ? "Save changes"
-                          : "Create customer"}
+                            ? "Save changes"
+                            : "Create customer"}
                 </Button>
             </DialogFooter>
         </form>

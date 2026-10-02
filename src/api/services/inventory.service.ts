@@ -1,395 +1,97 @@
 import api from "@/api/axios"
 import { fetchAll } from "@/api/list"
+import type {
+    Category,
+    CategoryPayload,
+    Brand,
+    BrandPayload,
+    Supplier,
+    SupplierPayload,
+    Customer,
+    CustomerPayload,
+    Unit,
+    UnitPayload,
+    Product,
+    ProductPayload,
+    ProductUnit,
+    ProductUnitPayload,
+    ProductSummary,
+    Stock,
+    StockMovement,
+    UnitAvailability,
+    StockAdjustmentPayload,
+    ExpenseCategory,
+    ExpenseCategoryPayload,
+    Expense,
+    ExpensePayload,
+    Purchase,
+    PurchasePayload,
+    Sale,
+    SalePayload,
+    Payment,
+    PaymentPayload,
+    DashboardStats,
+    ReportFilters,
+    ReceiptData,
+    PurchaseReceiptData,
+    ReportDownload,
+    StockSummary,
+    PaymentSummary,
+    CustomerSummary,
+    SupplierSummary,
+} from "@/api/types"
+
+export type {
+    Category,
+    CategoryPayload,
+    Brand,
+    BrandPayload,
+    Supplier,
+    SupplierPayload,
+    Customer,
+    CustomerPayload,
+    Unit,
+    UnitPayload,
+    Product,
+    ProductPayload,
+    ProductUnit,
+    ProductUnitPayload,
+    ProductSummary,
+    Stock,
+    StockMovement,
+    UnitAvailability,
+    StockAdjustmentPayload,
+    ExpenseCategory,
+    ExpenseCategoryPayload,
+    Expense,
+    ExpensePayload,
+    Purchase,
+    PurchaseItem,
+    PurchasePayload,
+    PurchaseItemPayload,
+    Sale,
+    SaleItem,
+    SalePayload,
+    SaleItemPayload,
+    Payment,
+    PaymentPayload,
+    DashboardStats,
+    ReportFilters,
+    ReceiptData,
+    PurchaseReceiptData,
+    PrintableReceiptData,
+    ReportDownload,
+    StockSummary,
+    PaymentSummary,
+    CustomerSummary,
+    SupplierSummary,
+} from "@/api/types"
 
 export type ApiListResponse<T> = {
     count?: number
     next?: string | null
     previous?: string | null
     results?: T[]
-}
-
-export type Category = {
-    uuid: string
-    name: string
-    description: string
-    created_at: string
-    created_by: string | null
-}
-
-export type CategoryPayload = Pick<Category, "name" | "description">
-
-export type Brand = {
-    uuid: string
-    name: string
-    category: string
-    category_name: string
-    created_at: string
-    created_by: string | null
-}
-
-export type BrandPayload = {
-    name: string
-    category: string
-}
-
-export type Supplier = {
-    uuid: string
-    name: string
-    phone: string
-    email: string
-    address: string
-    is_active: boolean
-    created_at: string
-}
-
-export type SupplierPayload = Omit<Supplier, "uuid" | "created_at" | "created_by">
-
-export type Customer = {
-    uuid: string
-    name: string
-    phone: string | null
-    email: string
-    business_location: string | null
-    is_active: boolean
-    created_at: string
-}
-
-export type CustomerPayload = Omit<Customer, "uuid" | "created_at">
-
-export type Unit = {
-    uuid: string
-    name: string
-    abbreviation: string | null
-    quantity: number
-    created_at: string
-    created_by: string | null
-}
-
-export type UnitPayload = {
-    name: string
-    abbreviation?: string | null
-    quantity?: number
-}
-
-export type Product = {
-    uuid: string
-    brand: string
-    brand_name: string
-    name: string
-    description: string
-    unit: string
-    unit_name: string
-    buying_price: string
-    selling_price: string
-    is_active: boolean
-    created_at: string
-    updated_at: string
-}
-
-export type ProductPayload = {
-    brand: string
-    unit: string
-    name: string
-    description: string
-    buying_price: string | number
-    selling_price: string | number
-    is_active?: boolean
-}
-
-export type ProductSummary = {
-    total_products: number
-    active_products: number
-    total_stock_value: number
-}
-
-export type Stock = {
-    uuid: string
-    product: string
-    product_name: string
-    unit_name: string
-    quantity: number
-    buying_price: string
-    selling_price: string
-    updated_at: string
-}
-
-export type StockMovement = {
-    uuid: string
-    movement_type: string
-    quantity: number
-    reference: string
-    notes: string
-    product_name: string
-    unit_name: string
-    created_at: string
-}
-
-export type StockAdjustmentPayload = {
-    product: string
-    movement_type: "Stocktake Surplus" | "Stocktake Loss"
-    quantity: number
-    reference?: string
-    notes?: string
-}
-
-export type ExpenseCategory = {
-    uuid: string
-    name: string
-    created_at: string
-}
-
-export type ExpenseCategoryPayload = Pick<ExpenseCategory, "name">
-
-export type Expense = {
-    uuid: string
-    category: string
-    category_name: string
-    amount: string
-    description: string
-    expense_date: string
-    created_at: string
-}
-
-export type ExpensePayload = {
-    category: string
-    amount: string
-    description: string
-    expense_date: string
-}
-
-export type PurchaseItem = {
-    uuid: string
-    product: string
-    product_name: string
-    quantity: number
-    unit_cost: string
-    subtotal: string
-}
-
-export type PurchaseItemPayload = {
-    product: string
-    quantity: number
-    unit_cost: string
-}
-
-export type Purchase = {
-    uuid: string
-    reference_code: string
-    supplier: string
-    supplier_name: string
-    invoice_number: string
-    status: "draft" | "completed" | "cancelled"
-    total: string
-    purchase_date: string
-    notes: string
-    items: PurchaseItem[]
-    created_at: string
-}
-
-export type PurchasePayload = {
-    supplier: string
-    invoice_number?: string
-    purchase_date: string
-    notes?: string
-    items: PurchaseItemPayload[]
-}
-
-export type SaleItem = {
-    uuid: string
-    product: string
-    product_name: string
-    quantity: number
-    unit_price: string
-    subtotal: string
-}
-
-export type SaleItemPayload = {
-    product: string
-    quantity: number
-    unit_price: string
-}
-
-export type Sale = {
-    uuid: string
-    reference_code: string
-    customer: string
-    customer_name: string
-    status: "draft" | "completed" | "cancelled"
-    payment_status: "unpaid" | "partial" | "paid"
-    sale_date: string
-    subtotal: string
-    discount: string
-    total: string
-    notes: string
-    items: SaleItem[]
-    created_at: string
-    paid_amount: string
-    outstanding_balance: string
-}
-
-export type SalePayload = {
-    customer: string
-    sale_date: string
-    discount?: string
-    notes?: string
-    items: SaleItemPayload[]
-}
-
-export type Payment = {
-    uuid: string
-    reference_code: string
-    customer: string
-    customer_name: string
-    sale: string | null
-    amount: string
-    method: string
-    reference: string
-    payment_date: string
-    notes: string
-    created_at: string
-}
-
-export type PaymentPayload = {
-    sale: string
-    amount: string
-    method: string
-    reference?: string
-    payment_date: string
-    notes?: string
-}
-
-export type DashboardStats = {
-    total_products: number
-    stock_units: number
-    sales_value: number
-    purchases_value: number
-    draft_purchases: number
-    low_stock_items: number
-    out_of_stock_items: number
-    recent_sales: {
-        uuid: string
-        customer_name: string | null
-        sale_date: string | null
-        total: string
-        payment_status: string
-    }[]
-    chart_data: {
-        day: string
-        date: string
-        amount: number
-        purchases?: number
-    }[]
-}
-
-export type ReportFilters = {
-    from?: string
-    to?: string
-    product?: string
-    supplier?: string
-    customer?: string
-}
-
-export type ReceiptBusiness = {
-    name: string
-    address: string
-    phone: string
-    email: string
-    tax_number: string
-    receipt_footer: string
-}
-
-export type ReceiptSale = {
-    uuid: string
-    receipt_number: string
-    sale_date: string
-    cashier: string
-    customer: string
-    payment_status: "unpaid" | "partial" | "paid"
-}
-
-export type ReceiptItem = {
-    uuid: string
-    product_name: string
-    quantity: number
-    unit: string
-    unit_price: string
-    line_total: string
-}
-
-export type ReceiptTotals = {
-    subtotal: string
-    discount: string
-    grand_total: string
-    amount_paid: string
-    outstanding_balance: string
-}
-
-export type ReceiptPayment = {
-    uuid: string
-    amount: string
-    method: string
-    reference: string
-    payment_date: string
-}
-
-export type ReceiptData = {
-    business: ReceiptBusiness
-    sale: ReceiptSale
-    items: ReceiptItem[]
-    totals: ReceiptTotals
-    payments: ReceiptPayment[]
-    payment_methods: string[]
-    currency: string
-}
-
-export type PurchaseReceiptData = {
-    business: ReceiptBusiness
-    purchase: {
-        uuid: string
-        receipt_number: string
-        supplier_invoice_number: string
-        purchase_date: string
-        receiver: string
-        supplier: string
-    }
-    items: ReceiptItem[]
-    totals: Pick<ReceiptTotals, "subtotal" | "grand_total">
-    currency: string
-}
-
-export type PrintableReceiptData = ReceiptData | PurchaseReceiptData
-
-export type ReportDownload = {
-    blob: Blob
-    filename: string
-}
-
-export type StockSummary = {
-    stocked_products: number
-    total_quantity: number
-    low_stock_items: number
-    out_of_stock_items: number
-    stock_value: number
-}
-
-export type PaymentSummary = {
-    today_payments: number
-    total_paid: number
-    outstanding: number
-    pending: number
-}
-
-export type CustomerSummary = {
-    total_customers: number
-    active_customers: number
-    total_sales: number
-    outstanding: number
-}
-
-export type SupplierSummary = {
-    total_suppliers: number
-    active_suppliers: number
-    total_purchases: number
 }
 
 function reportQuery(filters: ReportFilters) {
@@ -481,6 +183,18 @@ export const inventoryService = {
     deleteProduct: (uuid: string) => remove(`products/${uuid}/`),
     getProductsSummary: () => get<ProductSummary>("products/summary/"),
 
+    /* --- Product Units --- */
+    listProductUnits: (productUuid: string) =>
+        list<ProductUnit>(`products/${productUuid}/units/`),
+    getProductUnit: (productUuid: string, uuid: string) =>
+        get<ProductUnit>(`products/${productUuid}/units/${uuid}/`),
+    createProductUnit: (productUuid: string, payload: ProductUnitPayload) =>
+        create<ProductUnit, ProductUnitPayload>(`products/${productUuid}/units/`, payload),
+    updateProductUnit: (productUuid: string, uuid: string, payload: ProductUnitPayload) =>
+        update<ProductUnit, ProductUnitPayload>(`products/${productUuid}/units/${uuid}/`, payload),
+    deleteProductUnit: (productUuid: string, uuid: string) =>
+        remove(`products/${productUuid}/units/${uuid}/`),
+
     /* --- Brands --- */
     listBrands: () => list<Brand>("brands/"),
     createBrand: (payload: BrandPayload) =>
@@ -521,6 +235,13 @@ export const inventoryService = {
     /* --- Stock --- */
     listStock: () => list<Stock>("stocks/"),
     getStockSummary: () => get<StockSummary>("stocks/summary/"),
+    /** Availability expressed in the selected selling unit (backend is the source of truth). */
+    getStockAvailability: (productUuid: string, productUnitUuid?: string) =>
+        get<UnitAvailability[]>(
+            `stocks/availability/?product=${encodeURIComponent(productUuid)}${
+                productUnitUuid ? `&unit=${encodeURIComponent(productUnitUuid)}` : ""
+            }`
+        ),
     listStockMovements: () => list<StockMovement>("stock-movements/"),
     createStockMovement: (payload: StockAdjustmentPayload) =>
         create<StockMovement, StockAdjustmentPayload>(

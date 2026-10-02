@@ -28,6 +28,7 @@ import {
 import { ResourcePage } from "@/components/resource-page"
 import type { InventoryRow } from "@/lib/inventory-data"
 import { formatCurrency, formatDate } from "@/lib/format"
+import { getApiErrorMessage } from "@/lib/api-error"
 
 function toRows(expenses: Expense[]): InventoryRow[] {
     return expenses.map((expense) => ({
@@ -63,8 +64,8 @@ export default function ExpensesPage() {
             const expense = await inventoryService.getExpense(row.id)
             setEditingExpense(expense)
             setFormOpen(true)
-        } catch {
-            toast.error("Unable to load expense details.")
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to load expense details."))
         }
     }, [])
 
@@ -87,8 +88,8 @@ export default function ExpensesPage() {
             toast.success("Expense deleted successfully.")
             setDeletingExpense(null)
             setRefreshKey((k) => k + 1)
-        } catch {
-            toast.error("Unable to delete this expense.")
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to delete this expense."))
         }
     }
 
@@ -113,10 +114,10 @@ export default function ExpensesPage() {
                 columns={["Category", "Date", "Amount", "Description"]}
                 rows={toRows(expenses)}
                 summary={summaryData}
-                 loadRows={loadRows}
-                 refreshKey={refreshKey}
-                 viewIcon={<ReceiptText className="size-5" />}
-                 onAction={() => {
+                loadRows={loadRows}
+                refreshKey={refreshKey}
+                viewIcon={<ReceiptText className="size-5" />}
+                onAction={() => {
                     setEditingExpense(null)
                     setFormOpen(true)
                 }}

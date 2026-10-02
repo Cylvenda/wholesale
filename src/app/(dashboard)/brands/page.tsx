@@ -39,16 +39,7 @@ import { DialogFooter as FormDialogFooter } from "@/components/ui/dialog"
 import { ResourcePage } from "@/components/resource-page"
 import type { InventoryRow } from "@/lib/inventory-data"
 import { formatDate } from "@/lib/format"
-
-function messageFrom(error: unknown, fallback: string) {
-    if (typeof error === "object" && error && "response" in error) {
-        const response = error.response as {
-            data?: { detail?: string }
-        }
-        return response.data?.detail ?? fallback
-    }
-    return fallback
-}
+import { getApiErrorMessage } from "@/lib/api-error"
 
 function toRows(brands: Brand[]): InventoryRow[] {
     return brands.map((brand) => ({
@@ -121,12 +112,7 @@ export default function BrandsPage() {
             setFormOpen(false)
             setRefreshKey((prev) => prev + 1)
         } catch (submitError) {
-            setFormError(
-                messageFrom(
-                    submitError,
-                    "Unable to save the brand. Please review the details and try again."
-                )
-            )
+            setFormError(getApiErrorMessage(submitError, "Unable to save the brand."))
         } finally {
             setSubmitting(false)
         }
@@ -141,12 +127,7 @@ export default function BrandsPage() {
             setDeletingBrand(null)
             setRefreshKey((prev) => prev + 1)
         } catch (deleteError) {
-            toast.error(
-                messageFrom(
-                    deleteError,
-                    "Unable to delete this brand. It may be in use by products."
-                )
-            )
+            toast.error(getApiErrorMessage(deleteError, "Unable to delete this brand. It may be in use by products."))
         } finally {
             setSubmitting(false)
         }
@@ -273,8 +254,8 @@ export default function BrandsPage() {
                                 {submitting
                                     ? "Saving…"
                                     : editingBrand
-                                      ? "Save changes"
-                                      : "Create brand"}
+                                        ? "Save changes"
+                                        : "Create brand"}
                             </Button>
                         </FormDialogFooter>
                     </form>

@@ -29,6 +29,7 @@ import { ResourcePage } from "@/components/resource-page"
 import { ViewDialog } from "@/components/shared/view-dialog"
 import type { InventoryRow, Status } from "@/lib/inventory-data"
 import { formatCurrency, formatDate } from "@/lib/format"
+import { getApiErrorMessage, getApiErrorMessageAsync } from "@/lib/api-error"
 import { toast } from "react-toastify"
 import { Button } from "@/components/ui/button"
 
@@ -92,8 +93,8 @@ export default function PurchasesPage() {
                     "Only received purchases can be edited. Create a new purchase instead."
                 )
             }
-        } catch {
-            toast.error("Unable to load purchase details.")
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to load purchase details."))
         }
     }, [])
 
@@ -130,8 +131,8 @@ export default function PurchasesPage() {
             link.click()
             URL.revokeObjectURL(url)
             toast.success("Purchase receipt downloaded.")
-        } catch {
-            toast.error("Unable to download this purchase receipt.")
+        } catch (error: unknown) {
+            toast.error(await getApiErrorMessageAsync(error, "Unable to download this purchase receipt."))
         }
     }
 
@@ -155,8 +156,8 @@ export default function PurchasesPage() {
             setCancelOpen(false)
             setCancelTarget(null)
             setRefreshKey((k) => k + 1)
-        } catch {
-            toast.error("Unable to cancel this purchase.")
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to cancel this purchase."))
         } finally {
             setSubmitting(false)
         }
@@ -234,7 +235,9 @@ export default function PurchasesPage() {
                                             className="flex justify-between text-sm"
                                         >
                                             <span>
-                                                {item.product_name} × {item.quantity}
+                                                {item.product_name} × {item.quantity}{" "}
+                                                {item.product_unit_name}
+                                                {` (${item.base_quantity} base)`}
                                             </span>
                                             <span className="text-muted-foreground">
                                                 {formatCurrency(item.subtotal)}

@@ -31,16 +31,7 @@ import { DialogFooter as FormDialogFooter } from "@/components/ui/dialog"
 import { ResourcePage } from "@/components/resource-page"
 import type { InventoryRow } from "@/lib/inventory-data"
 import { formatDate } from "@/lib/format"
-
-function messageFrom(error: unknown, fallback: string) {
-    if (typeof error === "object" && error && "response" in error) {
-        const response = error.response as {
-            data?: { detail?: string }
-        }
-        return response.data?.detail ?? fallback
-    }
-    return fallback
-}
+import { getApiErrorMessage } from "@/lib/api-error"
 
 function toRows(units: Unit[]): InventoryRow[] {
     return units.map((unit) => ({
@@ -48,7 +39,7 @@ function toRows(units: Unit[]): InventoryRow[] {
         primary: unit.name,
         secondary: unit.abbreviation || undefined,
         values: [
-            String(unit.quantity),
+            unit.is_active ? "Active" : "Inactive",
             formatDate(unit.created_at),
         ],
     }))
@@ -61,8 +52,8 @@ export default function UnitsPage() {
     const [values, setValues] = useState<{
         name: string
         abbreviation: string
-        quantity: number
-    }>({ name: "", abbreviation: "", quantity: 1 })
+        is_active: boolean
+    }>({ name: "", abbreviation: "", is_active: true })
     const [formError, setFormError] = useState<string | null>(null)
     const [submitting, setSubmitting] = useState(false)
     const [refreshKey, setRefreshKey] = useState(0)
@@ -74,7 +65,7 @@ export default function UnitsPage() {
 
     const openCreate = () => {
         setEditingUnit(null)
-        setValues({ name: "", abbreviation: "", quantity: 1 })
+        setValues({ name: "", abbreviation: "", is_active: true })
         setFormError(null)
         setFormOpen(true)
     }
@@ -84,7 +75,7 @@ export default function UnitsPage() {
         setValues({
             name: unit.name,
             abbreviation: unit.abbreviation ?? "",
-            quantity: unit.quantity,
+            is_active: unit.is_active,
         })
         setFormError(null)
         setFormOpen(true)
@@ -103,7 +94,7 @@ export default function UnitsPage() {
         const payload = {
             name: values.name.trim(),
             abbreviation: values.abbreviation.trim() || undefined,
-            quantity: values.quantity,
+            is_active: values.is_active,
         }
 
         try {
@@ -117,12 +108,7 @@ export default function UnitsPage() {
             setFormOpen(false)
             setRefreshKey((prev) => prev + 1)
         } catch (submitError) {
-            setFormError(
-                messageFrom(
-                    submitError,
-                    "Unable to save the unit. Please review the details and try again."
-                )
-            )
+            setFormError(getApiErrorMessage(submitError, "Unable to save the unit."))
         } finally {
             setSubmitting(false)
         }
@@ -137,12 +123,7 @@ export default function UnitsPage() {
             setDeletingUnit(null)
             setRefreshKey((prev) => prev + 1)
         } catch (deleteError) {
-            toast.error(
-                messageFrom(
-                    deleteError,
-                    "Unable to delete this unit. It may be referenced by products."
-                )
-            )
+            toast.error(getApiErrorMessage(deleteError, "Unable to delete this unit. It may be referenced by products."))
         } finally {
             setSubmitting(false)
         }
@@ -152,9 +133,9 @@ export default function UnitsPage() {
         <>
             <ResourcePage
                 title="Units"
-                description="Manage product measurement units (e.g., kg, pieces, litres)."
+                description="Manage product measurement units (e.g., Bottle, Crate, Kilogram, Liter)."
                 action="Add unit"
-                columns={["Unit", "Quantity", "Created"]}
+                columns={["Unit", "Abbreviation", "Status", "Created"]}
                 loadRows={loadRows}
                 refreshKey={refreshKey}
                 viewIcon={<Ruler className="size-5" />}
@@ -164,7 +145,7 @@ export default function UnitsPage() {
                         uuid: row.id,
                         name: row.primary,
                         abbreviation: row.secondary ?? null,
-                        quantity: parseInt(row.values[0], 10) || 1,
+                        is_active: row.values[0] === "Active",
                         created_at: "",
                         created_by: null,
                     } as unknown as Unit
@@ -175,7 +156,7 @@ export default function UnitsPage() {
                         uuid: row.id,
                         name: row.primary,
                         abbreviation: null,
-                        quantity: 0,
+                        is_active: false,
                         created_at: "",
                         created_by: null,
                     } as unknown as Unit)
@@ -215,7 +196,7 @@ export default function UnitsPage() {
                                     }
                                     disabled={submitting}
                                     autoFocus
-                                    placeholder="e.g., Kilogram, Piece, Litre"
+                                    placeholder="e.g., Bottle, Crate, Kilogram, Liter"
                                 />
                             </div>
 
@@ -233,30 +214,26 @@ export default function UnitsPage() {
                                         }))
                                     }
                                     disabled={submitting}
-                                    placeholder="e.g., kg, pc, L"
+                                    placeholder="e.g., btl, crt, kg, L"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="unit-quantity">
-                                    Quantity per unit
+                                <Label htmlFor="unit-active" className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        id="unit-active"
+                                        type="checkbox"
+                                        checked={values.is_active}
+                                        onChange={(event) =>
+                                            setValues((current) => ({
+                                                ...current,
+                                                is_active: event.target.checked,
+                                            }))
+                                        }
+                                        disabled={submitting}
+                                    />
+                                    <span>Active</span>
                                 </Label>
-                                <Input
-                                    id="unit-quantity"
-                                    type="number"
-                                    min="1"
-                                    value={values.quantity}
-                                    onChange={(event) =>
-                                        setValues((current) => ({
-                                            ...current,
-                                            quantity: Math.max(
-                                                1,
-                                                parseInt(event.target.value, 10) || 1
-                                            ),
-                                        }))
-                                    }
-                                    disabled={submitting}
-                                />
                             </div>
 
                             {formError && (
@@ -282,8 +259,8 @@ export default function UnitsPage() {
                                 {submitting
                                     ? "Saving…"
                                     : editingUnit
-                                      ? "Save changes"
-                                      : "Create unit"}
+                                        ? "Save changes"
+                                        : "Create unit"}
                             </Button>
                         </FormDialogFooter>
                     </form>

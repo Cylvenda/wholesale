@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { DialogFooter } from "@/components/ui/dialog"
 import { toast } from "react-toastify"
+import { getApiErrorMessage } from "@/lib/api-error"
 import {
     inventoryService,
     type Supplier,
@@ -63,10 +64,8 @@ export function SupplierForm({
                 toast.success("Supplier created successfully.")
             }
             await onSubmit()
-        } catch {
-            setFormError(
-                "Unable to save the supplier. Please review the details and try again."
-            )
+        } catch (error: unknown) {
+            setFormError(getApiErrorMessage(error, "Unable to save the supplier."))
         } finally {
             setSubmitting(false)
         }
@@ -158,8 +157,8 @@ export function SupplierForm({
                             ? "Saving…"
                             : "Creating…"
                         : mode === "edit"
-                          ? "Save changes"
-                          : "Create supplier"}
+                            ? "Save changes"
+                            : "Create supplier"}
                 </Button>
             </DialogFooter>
         </form>

@@ -1,28 +1,8 @@
 import api from "@/api/axios"
 import { fetchAll } from "@/api/list"
+import type { Product, ProductPayload } from "@/api/types"
 
-export type Product = {
-    uuid: string;
-    name: string;
-    brand: string;
-    brand_name: string;
-    category_name: string;
-    unit: string;
-    unit_name?: string;
-    buying_price: string;
-    selling_price: string;
-    description?: string;
-    is_active: boolean;
-}
-export type ProductPayload = {
-    name: string;
-    brand: string;
-    unit: string;
-    buying_price: string;
-    selling_price: string;
-    description?: string;
-    is_active?: boolean;
-}
+export type { Product, ProductPayload } from "@/api/types"
 
 export const productService = {
     async list() {

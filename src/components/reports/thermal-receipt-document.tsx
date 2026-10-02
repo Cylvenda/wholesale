@@ -96,7 +96,7 @@ export function ThermalReceiptDocument({
                                    <div className="receipt-item-row">
                                         <span>{index + 1}</span>
                                         <span className="receipt-product-name">{item.product_name}</span>
-                                        <span>{Number(item.quantity).toLocaleString("en-TZ")}</span>
+                                        <span>{Number(item.quantity).toLocaleString("en-TZ")} {item.unit}</span>
                                         <span>{formatMoney(item.unit_price, receipt.currency)}</span>
                                         <span>{formatMoney(item.line_total, receipt.currency)}</span>
                                    </div>

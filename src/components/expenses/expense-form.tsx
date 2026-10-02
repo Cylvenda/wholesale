@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select"
 import { DialogFooter } from "@/components/ui/dialog"
 import { toast } from "react-toastify"
+import { getApiErrorMessage } from "@/lib/api-error"
 import {
     inventoryService,
     type Expense,
@@ -55,9 +56,9 @@ export function ExpenseForm({
                 if (active) {
                     setCategories(rows)
                 }
-            } catch {
+            } catch (error: unknown) {
                 if (active) {
-                    toast.error("Unable to load expense categories.")
+                    toast.error(getApiErrorMessage(error, "Unable to load expense categories."))
                 }
             }
         }
@@ -106,22 +107,8 @@ export function ExpenseForm({
                 toast.success("Expense recorded successfully.")
             }
             await onSubmit()
-        } catch (err: unknown) {
-            const apiMsg =
-                (err as {
-                    response?: {
-                        data?: {
-                            detail?: string
-                            amount?: string[]
-                        }
-                    }
-                })?.response?.data
-
-            setFormError(
-                apiMsg?.amount?.[0] ||
-                    apiMsg?.detail ||
-                    "Unable to save the expense. Please review the details and try again."
-            )
+        } catch (error: unknown) {
+            setFormError(getApiErrorMessage(error, "Unable to save the expense."))
         } finally {
             setSubmitting(false)
         }
@@ -216,8 +203,8 @@ export function ExpenseForm({
                             ? "Saving…"
                             : "Recording…"
                         : mode === "edit"
-                          ? "Save changes"
-                          : "Record expense"}
+                            ? "Save changes"
+                            : "Record expense"}
                 </Button>
             </DialogFooter>
         </form>

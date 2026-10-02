@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select"
 import { DialogFooter } from "@/components/ui/dialog"
 import { toast } from "react-toastify"
+import { getApiErrorMessage } from "@/lib/api-error"
 import { formatCurrency } from "@/lib/format"
 import {
     inventoryService,
@@ -46,7 +47,6 @@ export function PaymentForm({
     const [sale, setSale] = useState(payment?.sale ?? "")
     const [amount, setAmount] = useState(payment?.amount ?? "")
     const [method, setMethod] = useState(payment?.method ?? "cash")
-    const [reference, setReference] = useState(payment?.reference ?? "")
     const [paymentDate, setPaymentDate] = useState(
         payment?.payment_date ?? new Date().toISOString().slice(0, 16)
     )
@@ -76,9 +76,9 @@ export function PaymentForm({
                         )
                     )
                 }
-            } catch {
+            } catch (error: unknown) {
                 if (active) {
-                    toast.error("Unable to load sales.")
+                    toast.error(getApiErrorMessage(error, "Unable to load sales."))
                 }
             }
         }
@@ -108,7 +108,6 @@ export function PaymentForm({
             sale,
             amount,
             method,
-            reference: reference.trim() || undefined,
             payment_date: paymentDate,
             notes: notes.trim() || undefined,
         }
@@ -122,10 +121,8 @@ export function PaymentForm({
                 toast.success("Payment recorded successfully.")
             }
             await onSubmit()
-        } catch {
-            setFormError(
-                "Unable to save the payment. Check that the sale is completed and the amount does not exceed the outstanding balance."
-            )
+        } catch (error: unknown) {
+            setFormError(getApiErrorMessage(error, "Unable to save the payment."))
         } finally {
             setSubmitting(false)
         }
@@ -246,17 +243,6 @@ export function PaymentForm({
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="payment-reference">Reference</Label>
-                <Input
-                    id="payment-reference"
-                    value={reference}
-                    onChange={(e) => setReference(e.target.value)}
-                    disabled={submitting}
-                    placeholder="Receipt or transaction number"
-                />
-            </div>
-
-            <div className="space-y-2">
                 <Label htmlFor="payment-date">Payment date</Label>
                 <Input
                     id="payment-date"
@@ -303,8 +289,8 @@ export function PaymentForm({
                             ? "Saving…"
                             : "Recording…"
                         : mode === "edit"
-                          ? "Save changes"
-                          : "Record payment"}
+                            ? "Save changes"
+                            : "Record payment"}
                 </Button>
             </DialogFooter>
         </form>

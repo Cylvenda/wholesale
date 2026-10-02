@@ -29,6 +29,7 @@ import {
 import { ResourcePage } from "@/components/resource-page"
 import type { InventoryRow } from "@/lib/inventory-data"
 import { formatCurrency } from "@/lib/format"
+import { getApiErrorMessage } from "@/lib/api-error"
 
 function toRows(suppliers: Supplier[]): InventoryRow[] {
     return suppliers.map((supplier) => ({
@@ -74,8 +75,8 @@ export default function SuppliersPage() {
             const supplier = await inventoryService.getSupplier(row.id)
             setEditingSupplier(supplier)
             setFormOpen(true)
-        } catch {
-            toast.error("Unable to load supplier details.")
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to load supplier details."))
         }
     }, [])
 
@@ -98,8 +99,8 @@ export default function SuppliersPage() {
             toast.success("Supplier deleted successfully.")
             setDeletingSupplier(null)
             setRefreshKey((k) => k + 1)
-        } catch {
-            toast.error("Unable to delete this supplier. It may be in use.")
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to delete this supplier. It may be in use."))
         }
     }
 
@@ -107,8 +108,8 @@ export default function SuppliersPage() {
         try {
             const data = await inventoryService.getSuppliersSummary()
             setSummary(toSummary(data))
-        } catch {
-            // Summary endpoints may not be available on every backend
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to load supplier summary."))
         }
     }, [])
 
@@ -124,12 +125,12 @@ export default function SuppliersPage() {
                 description="Manage supplier contacts and wholesale purchasing relationships."
                 action="Add supplier"
                 columns={["Supplier", "Email", "Address", "Status"]}
-                 rows={toRows(suppliers)}
-                 summary={summary}
-                 loadRows={loadRows}
-                 refreshKey={refreshKey}
-                 viewIcon={<Truck className="size-5" />}
-                 onAction={() => {
+                rows={toRows(suppliers)}
+                summary={summary}
+                loadRows={loadRows}
+                refreshKey={refreshKey}
+                viewIcon={<Truck className="size-5" />}
+                onAction={() => {
                     setEditingSupplier(null)
                     setFormOpen(true)
                 }}

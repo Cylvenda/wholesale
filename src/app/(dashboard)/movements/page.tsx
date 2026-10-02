@@ -28,6 +28,20 @@ function toMovementStatus(type: string): Status {
     return "adjustment"
 }
 
+function movementQuantity(movement: StockMovement): string {
+    return String(movement.transaction_quantity ?? movement.quantity)
+}
+
+function movementUnit(movement: StockMovement): string {
+    return movement.transaction_unit_name || movement.base_unit_name || "—"
+}
+
+function movementBaseQuantity(movement: StockMovement): string {
+    const base = movement.base_quantity ?? movement.quantity
+    const unit = movement.base_unit_name
+    return unit ? `${base} ${unit}` : String(base)
+}
+
 function toRows(movements: StockMovement[]): InventoryRow[] {
     return movements.map((movement) => ({
         id: movement.uuid,
@@ -35,8 +49,9 @@ function toRows(movements: StockMovement[]): InventoryRow[] {
         secondary: movement.reference || "Stock movement",
         values: [
             movement.movement_type,
-            String(movement.quantity),
-            movement.unit_name,
+            movementQuantity(movement),
+            movementUnit(movement),
+            movementBaseQuantity(movement),
             formatDate(movement.created_at),
         ],
         status: toMovementStatus(movement.movement_type),
@@ -71,7 +86,7 @@ export default function StockMovementsPage() {
                 title="Stock movements"
                 description="A complete record of stock entering and leaving the warehouse."
                 action="Add adjustment"
-                columns={["Product", "Type", "Quantity", "Unit", "Created", "Status"]}
+                columns={["Product", "Type", "Quantity", "Unit", "Base Qty", "Created", "Status"]}
                 rows={toRows(movements)}
                 loadRows={loadRows}
                 refreshKey={refreshKey}
@@ -109,8 +124,20 @@ export default function StockMovementsPage() {
                     fields={[
                         { label: "Reference", value: viewingMovement.reference || "—" },
                         { label: "Type", value: viewingMovement.movement_type },
-                        { label: "Quantity", value: String(viewingMovement.quantity) },
-                        { label: "Unit", value: viewingMovement.unit_name },
+                        { label: "Quantity", value: movementQuantity(viewingMovement) },
+                        { label: "Unit", value: movementUnit(viewingMovement) },
+                        {
+                            label: "Stock impact",
+                            value: movementBaseQuantity(viewingMovement),
+                        },
+                        ...(viewingMovement.conversion_factor_used
+                            ? [
+                                  {
+                                      label: "Conversion used",
+                                      value: `1 ${movementUnit(viewingMovement)} = ${viewingMovement.conversion_factor_used} ${viewingMovement.base_unit_name ?? ""}`,
+                                  },
+                              ]
+                            : []),
                         { label: "Created", value: formatDate(viewingMovement.created_at) },
                     ]}
                     sections={[

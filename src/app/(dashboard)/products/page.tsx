@@ -57,11 +57,12 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { formatCurrency } from "@/lib/format"
+import { getApiErrorMessage } from "@/lib/api-error"
 
 export default function ProductsPage() {
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
-    const [failed, setFailed] = useState(false)
+    const [failed, setFailed] = useState<string | null>(null)
     const [search, setSearch] = useState("")
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
@@ -73,11 +74,11 @@ export default function ProductsPage() {
 
     const load = useCallback(() => {
         setLoading(true)
-        setFailed(false)
+        setFailed(null)
         productService
             .list()
             .then(setProducts)
-            .catch(() => setFailed(true))
+            .catch((error: unknown) => setFailed(getApiErrorMessage(error, "Unable to load products.")))
             .finally(() => setLoading(false))
     }, [])
 
@@ -88,8 +89,8 @@ export default function ProductsPage() {
             .then((result) => {
                 if (active) setProducts(result)
             })
-            .catch(() => {
-                if (active) setFailed(true)
+            .catch((error: unknown) => {
+                if (active) setFailed(getApiErrorMessage(error, "Unable to load products."))
             })
             .finally(() => {
                 if (active) setLoading(false)
@@ -125,15 +126,15 @@ export default function ProductsPage() {
             toast.success("Product deleted successfully.")
             setDeletingProduct(null)
             load()
-        } catch {
-            toast.error("Unable to delete this product. It may be in use.")
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to delete this product. It may be in use."))
         } finally {
             setSubmitting(false)
         }
     }
 
     const filtered = products.filter((product) =>
-        `${product.name} ${product.brand_name} ${product.category_name} ${product.unit}`.toLowerCase().includes(
+        `${product.name} ${product.brand_name} ${product.category_name} ${product.base_unit_name}`.toLowerCase().includes(
             search.toLowerCase()
         )
     )
@@ -183,7 +184,7 @@ export default function ProductsPage() {
 
                     <CardContent className="px-0 pb-0">
                         {failed ? (
-                            <ErrorState onRetry={load} />
+                            <ErrorState message={failed} onRetry={load} />
                         ) : loading ? (
                             <TableSkeleton />
                         ) : (
@@ -224,7 +225,7 @@ export default function ProductsPage() {
                                                     {product.brand_name || "—"}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {product.unit_name}
+                                                    {product.base_unit_name}
                                                 </TableCell>
                                                 <TableCell>
                                                     {formatCurrency(
@@ -232,9 +233,7 @@ export default function ProductsPage() {
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="font-medium">
-                                                    {formatCurrency(
-                                                        product.selling_price
-                                                    )}
+                                                    {formatCurrency(product.selling_price)}
                                                 </TableCell>
                                                 <TableCell>
                                                     <StatusBadge
@@ -396,11 +395,50 @@ export default function ProductsPage() {
                         icon={<Package className="size-5" />}
                         fields={[
                             { label: "Brand", value: viewingProduct.brand_name || "—" },
-                            { label: "Unit", value: viewingProduct.unit_name || "—" },
+                            { label: "Base unit", value: viewingProduct.base_unit_name || "—" },
                             { label: "Buying price", value: formatCurrency(viewingProduct.buying_price) },
                             { label: "Selling price", value: formatCurrency(viewingProduct.selling_price) },
                         ]}
                         sections={[
+                            {
+                                label: "Configured units",
+                                content: (
+                                    <div className="space-y-2">
+                                        {(viewingProduct.product_units ?? [])
+                                            .filter((pu) => pu.is_active)
+                                            .map((pu) => (
+                                                <div
+                                                    key={pu.uuid}
+                                                    className="flex justify-between gap-4 text-sm"
+                                                >
+                                                    <span>
+                                                        {pu.unit_name}
+                                                        {pu.unit_abbreviation
+                                                            ? ` (${pu.unit_abbreviation})`
+                                                            : ""}
+                                                        {"1 "}
+                                                        {pu.unit_abbreviation ||
+                                                            pu.unit_name}{" "}
+                                                        ={" "}
+                                                        {pu.conversion_factor}{" "}
+                                                        {viewingProduct.base_unit_name}
+                                                    </span>
+                                                    <span className="shrink-0 text-muted-foreground">
+                                                        buy {formatCurrency(pu.buying_price)} / sell{" "}
+                                                        {formatCurrency(pu.selling_price)}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        {(viewingProduct.product_units ?? [])
+                                            .filter((pu) => pu.is_active)
+                                            .length === 0 && (
+                                                <p className="text-sm text-muted-foreground">
+                                                    No units configured.
+                                                </p>
+                                            )}
+                                    </div>
+                                ),
+                            },
                             {
                                 label: "Description",
                                 content: (

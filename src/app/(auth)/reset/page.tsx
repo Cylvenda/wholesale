@@ -11,6 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { authUserService } from "@/api/services/auth.service";
 import { useState } from "react";
 import { toast } from "react-toastify";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 type ResetFormValues = z.infer<typeof ResetFormSchema>;
 
@@ -32,16 +33,7 @@ const ForgetPassword = () => {
       toast.success("Password reset link sent. Please check your email.");
       form.reset();
     } catch (error: unknown) {
-      const errorMessage = (
-        error as { response?: { data?: { email?: string[]; detail?: string } } }
-      )?.response?.data;
-      
-      const msg =
-        errorMessage?.detail ||
-        errorMessage?.email?.[0] ||
-        "Could not send reset link. Please try again.";
-      
-      toast.error(msg);
+      toast.error(getApiErrorMessage(error, "Could not send reset link."));
     } finally {
       setLoading(false);
     }

@@ -18,6 +18,8 @@ import {
 import { ResourcePage } from "@/components/resource-page"
 import type { InventoryRow, Status } from "@/lib/inventory-data"
 import { formatCurrency, formatDate } from "@/lib/format"
+import { getApiErrorMessage } from "@/lib/api-error"
+import { toast } from "react-toastify"
 
 function toStockStatus(quantity: number): Status {
     if (quantity === 0) return "out-of-stock"
@@ -33,8 +35,10 @@ function toRows(stocks: Stock[]): InventoryRow[] {
             id: stock.uuid,
             primary: stock.product_name,
             values: [
-                String(quantity),
-                stock.unit_name,
+                // Human readable, e.g. "9 CS + 23 CHP", with the stored base
+                // total underneath. Stock itself stays in base units.
+                stock.formatted_quantity,
+                stock.base_display || `${quantity} ${stock.base_unit_abbreviation || stock.base_unit_name}`,
                 formatCurrency(stock.buying_price),
                 formatCurrency(stockValue),
                 formatDate(stock.updated_at),
@@ -51,7 +55,7 @@ function toSummary(summary: StockSummary): { label: string; value: string }[] {
             value: String(summary.stocked_products),
         },
         {
-            label: "Total quantity",
+            label: "Total quantity (base units)",
             value: String(summary.total_quantity),
         },
         {
@@ -83,8 +87,8 @@ export default function StockPage() {
         try {
             const data = await inventoryService.getStockSummary()
             setSummary(toSummary(data))
-        } catch {
-            // Summary may not be available
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to load stock summary."))
         }
     }, [])
 
@@ -99,7 +103,7 @@ export default function StockPage() {
                 title="Stock"
                 description="Track available quantities and movement across your warehouse."
                 action="Record movement"
-                columns={["Product", "Current", "Unit", "Unit cost", "Stock value", "Last movement", "Status"]}
+                columns={["Product", "In stock", "Total (base unit)", "Unit cost", "Stock value", "Last movement", "Status"]}
                 rows={toRows(stocks)}
                 summary={summary}
                 loadRows={loadRows}

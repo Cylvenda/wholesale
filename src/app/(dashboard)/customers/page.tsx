@@ -25,6 +25,7 @@ import {
 import { ResourcePage } from "@/components/resource-page"
 import type { InventoryRow } from "@/lib/inventory-data"
 import { formatCurrency } from "@/lib/format"
+import { getApiErrorMessage } from "@/lib/api-error"
 
 function toRows(customers: Customer[]): InventoryRow[] {
     return customers.map((customer) => ({
@@ -69,8 +70,8 @@ export default function CustomersPage() {
             const customer = await inventoryService.getCustomer(row.id)
             setEditingCustomer(customer)
             setFormOpen(true)
-        } catch {
-            toast.error("Unable to load customer details.")
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to load customer details."))
         }
     }
 
@@ -93,8 +94,8 @@ export default function CustomersPage() {
             toast.success("Customer deleted successfully.")
             setDeletingCustomer(null)
             setRefreshKey((k) => k + 1)
-        } catch {
-            toast.error("Unable to delete this customer. It may be in use.")
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to delete this customer. It may be in use."))
         }
     }
 
@@ -104,9 +105,8 @@ export default function CustomersPage() {
         try {
             const data = await inventoryService.getCustomersSummary()
             setSummary(toSummary(data))
-        } catch {
-            // Summary endpoints may not be available on every backend;
-            // the page remains usable without summary cards.
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, "Unable to load customer summary."))
         }
     }, [])
 
@@ -122,12 +122,12 @@ export default function CustomersPage() {
                 description="Keep wholesale customer contacts and trading history organized."
                 action="Add customer"
                 columns={["Customer", "Email", "Location", "Status"]}
-                 rows={toRows(customers)}
-                 summary={summary}
-                 loadRows={loadRows}
-                 refreshKey={refreshKey}
-                 viewIcon={<Users className="size-5" />}
-                 onAction={() => {
+                rows={toRows(customers)}
+                summary={summary}
+                loadRows={loadRows}
+                refreshKey={refreshKey}
+                viewIcon={<Users className="size-5" />}
+                onAction={() => {
                     setEditingCustomer(null)
                     setFormOpen(true)
                 }}

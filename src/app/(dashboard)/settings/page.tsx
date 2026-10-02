@@ -11,6 +11,7 @@ import { toast } from "react-toastify"
 import { userServices } from "@/api/services/user.service"
 import { PageHeader } from "@/components/shared/page-header"
 import type { UserMeResponse } from "@/store/auth/auth.types"
+import { getApiErrorMessage } from "@/lib/api-error"
 
 interface SettingsFieldProps {
     label: string
@@ -55,7 +56,7 @@ function SettingsCard({ title, description, children, onSave, saving }: Settings
                 {children}
                 {onSave && (
                     <div className="flex justify-end border-t border-border pt-4 gap-2">
-                        <Button variant="outline" onClick={() => {}}>
+                        <Button variant="outline" onClick={() => { }}>
                             Cancel
                         </Button>
                         <Button onClick={onSave} disabled={saving}>
@@ -95,8 +96,8 @@ export default function SettingsPage() {
             setLastName(data.last_name || "")
             setEmail(data.email || "")
             setPhone(data.phone || "")
-        } catch {
-            setError("Unable to load your profile. Please try again.")
+        } catch (error: unknown) {
+            setError(getApiErrorMessage(error, "Unable to load your profile."))
         } finally {
             setLoading(false)
         }
@@ -116,8 +117,8 @@ export default function SettingsPage() {
                 last_name: lastName.trim(),
             })
             toast.success("Profile updated successfully.")
-        } catch {
-            setError("Unable to update your profile. Please try again.")
+        } catch (error: unknown) {
+            setError(getApiErrorMessage(error, "Unable to update your profile."))
         } finally {
             setSaving(false)
         }
@@ -128,10 +129,10 @@ export default function SettingsPage() {
             <main className="min-h-full bg-muted/30">
                 <div className="mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-6">
                     <PageHeader
-                    eyebrow="Workspace configuration"
-                    title="Settings"
-                    description="Manage your personal profile."
-                />
+                        eyebrow="Workspace configuration"
+                        title="Settings"
+                        description="Manage your personal profile."
+                    />
                     <Card>
                         <CardContent className="p-8">
                             <div className="flex items-center justify-center">
@@ -153,12 +154,12 @@ export default function SettingsPage() {
                     description="Manage your profile, business settings and application preferences."
                 />
 
-                    <Tabs defaultValue="profile" className="w-full">
-                        <TabsList className="w-full justify-start overflow-x-auto">
-                            <TabsTrigger value="profile">Profile</TabsTrigger>
-                        </TabsList>
+                <Tabs defaultValue="profile" className="w-full">
+                    <TabsList className="w-full justify-start overflow-x-auto">
+                        <TabsTrigger value="profile">Profile</TabsTrigger>
+                    </TabsList>
 
-                        <TabsContent value="profile">
+                    <TabsContent value="profile">
                         <SettingsCard
                             title="Profile"
                             description="Personal details used in your workspace."

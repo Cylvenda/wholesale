@@ -8,6 +8,7 @@ import {
      type PrintableReceiptData,
 } from "@/api/services/inventory.service"
 import { ThermalReceiptDocument } from "@/components/reports/thermal-receipt-document"
+import { getApiErrorMessage, getApiErrorMessageAsync } from "@/lib/api-error"
 
 type ReceiptPageViewProps = {
      uuid: string
@@ -19,6 +20,7 @@ export function ReceiptPageView({ uuid, kind }: ReceiptPageViewProps) {
           key: string
           receipt?: PrintableReceiptData
           failed?: boolean
+          errorMessage?: string
      } | null>(null)
      const [downloading, setDownloading] = useState(false)
      const requestKey = `${kind}:${uuid}`
@@ -34,10 +36,11 @@ export function ReceiptPageView({ uuid, kind }: ReceiptPageViewProps) {
                .then((data) => {
                     if (active) setResult({ key: requestKey, receipt: data })
                })
-               .catch(() => {
+               .catch((error: unknown) => {
                     if (active) {
-                         setResult({ key: requestKey, failed: true })
-                         toast.error("Unable to load this receipt.")
+                         const errorMessage = getApiErrorMessage(error, "Unable to load this receipt.")
+                         setResult({ key: requestKey, failed: true, errorMessage })
+                         toast.error(errorMessage)
                     }
                })
 
@@ -63,8 +66,8 @@ export function ReceiptPageView({ uuid, kind }: ReceiptPageViewProps) {
                link.click()
                URL.revokeObjectURL(url)
                toast.success("Receipt downloaded.")
-          } catch {
-               toast.error("Unable to download this receipt.")
+          } catch (error: unknown) {
+               toast.error(await getApiErrorMessageAsync(error, "Unable to download this receipt."))
           } finally {
                setDownloading(false)
           }
@@ -84,7 +87,7 @@ export function ReceiptPageView({ uuid, kind }: ReceiptPageViewProps) {
                          downloading={downloading}
                     />
                ) : result?.failed ? (
-                    <p className="py-8 text-center font-mono text-sm">Receipt not found.</p>
+                    <p className="py-8 text-center font-mono text-sm">{result.errorMessage}</p>
                ) : (
                     <p className="py-8 text-center font-mono text-sm">Receipt not found.</p>
                )}

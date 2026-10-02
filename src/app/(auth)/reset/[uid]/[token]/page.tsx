@@ -11,6 +11,7 @@ import { FieldInput, FormInput, PasswordInput } from "@/components/customs/form"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "react-toastify"
+import { getApiErrorMessage } from "@/lib/api-error"
 
 type Values = z.infer<typeof ResetConfirmFormSchema>
 
@@ -26,7 +27,7 @@ export default function ResetConfirmPage() {
       await authUserService.confirmPasswordReset({ uid, token, new_password: values.newPassword })
       toast.success("Password updated. You can now sign in.")
       router.replace("/login")
-    } catch { toast.error("Could not reset your password. The link may have expired.") }
+    } catch (error: unknown) { toast.error(getApiErrorMessage(error, "Could not reset your password. The link may have expired.")) }
     finally { setLoading(false) }
   }
 
