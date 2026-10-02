@@ -199,31 +199,6 @@ export type StockAdjustmentPayload = {
     notes?: string
 }
 
-export type ExpenseCategory = {
-    uuid: string
-    name: string
-    created_at: string
-}
-
-export type ExpenseCategoryPayload = Pick<ExpenseCategory, "name">
-
-export type Expense = {
-    uuid: string
-    category: string
-    category_name: string
-    amount: string
-    description: string
-    expense_date: string
-    created_at: string
-}
-
-export type ExpensePayload = {
-    category: string
-    amount: string
-    description: string
-    expense_date: string
-}
-
 export type PurchaseItem = {
     uuid: string
     product: string

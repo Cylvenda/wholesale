@@ -20,10 +20,6 @@ import type {
     StockMovement,
     UnitAvailability,
     StockAdjustmentPayload,
-    ExpenseCategory,
-    ExpenseCategoryPayload,
-    Expense,
-    ExpensePayload,
     Purchase,
     PurchasePayload,
     Sale,
@@ -61,10 +57,6 @@ export type {
     StockMovement,
     UnitAvailability,
     StockAdjustmentPayload,
-    ExpenseCategory,
-    ExpenseCategoryPayload,
-    Expense,
-    ExpensePayload,
     Purchase,
     PurchaseItem,
     PurchasePayload,
@@ -278,21 +270,6 @@ export const inventoryService = {
         update<Payment, PaymentPayload>(`payments/${uuid}/`, payload),
     deletePayment: (uuid: string) => remove(`payments/${uuid}/`),
     getPaymentsSummary: () => get<PaymentSummary>("payments/summary/"),
-
-    /* --- Expenses --- */
-    listExpenses: () =>
-        list<Expense>("expenses/"),
-    getExpense: (uuid: string) => get<Expense>(`expenses/${uuid}/`),
-    createExpense: (payload: ExpensePayload) =>
-        create<Expense, ExpensePayload>("expenses/", payload),
-    updateExpense: (uuid: string, payload: ExpensePayload) =>
-        update<Expense, ExpensePayload>(`expenses/${uuid}/`, payload),
-    deleteExpense: (uuid: string) => remove(`expenses/${uuid}/`),
-
-    listExpenseCategories: () =>
-        list<ExpenseCategory>("expense-categories/"),
-    createExpenseCategory: (payload: ExpenseCategoryPayload) =>
-        create<ExpenseCategory, ExpenseCategoryPayload>("expense-categories/", payload),
 
     /* --- Reports and receipts --- */
     downloadPurchaseReport: (filters: ReportFilters = {}) =>
